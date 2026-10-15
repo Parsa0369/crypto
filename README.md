@@ -9,6 +9,7 @@
 - Hidden password prompt and password-hash verification.
 - Public hourly OHLCV market data (no API key required for this endpoint).
 - Historical up/down frequencies, target-touch frequency, negative-return frequency, volatility, and RSI(14).
+- Educational EMA(12/26) historical backtest with estimated per-side fees, equity curve, drawdown, and comparison against buy-and-hold; simulation only.
 - Selectable asset, target return, and forecast horizon (up to 7 days in this MVP).
 - Optional C++17 RSI implementation in native/.
 - Unit tests for basic analysis behavior.
@@ -64,5 +65,8 @@ start.ps1      Windows setup and launcher
 - Do not deploy Flask's development server publicly.
 - Dependency downloads use the configured package index. Do not install packages from untrusted mirrors.
 
+## Open-source acknowledgement
+CryptoPulse's independent educational backtesting workflow was inspired by reviewing the public documentation and capabilities of [Freqtrade](https://github.com/freqtrade/freqtrade), a separate project licensed under GNU GPL v3.0. CryptoPulse does not include copied Freqtrade source code or bundle the Freqtrade package. See `THIRD_PARTY_NOTICES.md` for the scope of this acknowledgement.
+
 ## License
-MIT; see LICENSE.
+CryptoPulse's own code remains under the MIT License; see LICENSE. This project is not affiliated with or endorsed by Freqtrade. The backtest is educational only, excludes live order execution, and its results are not financial advice.

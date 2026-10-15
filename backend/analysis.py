@@ -87,6 +87,27 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
     loss_hits = sum(x["return_pct"] < 0 for x in outcomes)
     volatility = pstdev(returns) if len(returns) > 1 else 0.0
 
+    indicators = _technical_indicators(candles)
+    bullish_checks = [
+        current > indicators["ema_20"] > indicators["ema_50"],
+        indicators["macd"] > indicators["macd_signal"],
+        50 <= indicators["rsi_14"] <= 70,
+    ]
+    bearish_checks = [
+        current < indicators["ema_20"] < indicators["ema_50"],
+        indicators["macd"] < indicators["macd_signal"],
+        indicators["rsi_14"] < 50,
+    ]
+    bullish_score, bearish_score = sum(bullish_checks), sum(bearish_checks)
+    if bullish_score >= 2 and bullish_score > bearish_score:
+        technical_bias = "تمایل صعودی"
+        decision_hint = "شرایط تکنیکال نسبتاً مثبت است؛ این به‌تنهایی دلیل کافی برای خرید نیست."
+    elif bearish_score >= 2 and bearish_score > bullish_score:
+        technical_bias = "تمایل نزولی"
+        decision_hint = "شرایط تکنیکال ضعیف‌تر است؛ ریسک ورود را با احتیاط بررسی کن."
+    else:
+        technical_bias = "خنثی / سیگنال متناقض"
+        decision_hint = "سیگنال‌ها هم‌جهت نیستند؛ بهتر است فقط بر اساس این تحلیل تصمیم نگیری."
     return {
         "price": current, "currency": "USDT", "horizon_hours": horizon_hours, "target_pct": target_pct,
         "sample_count": len(outcomes), "probability_up": _safe_percent(up, len(outcomes)),
@@ -94,7 +115,16 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
         "probability_target_hit": _safe_percent(target_hits, len(outcomes)),
         "probability_negative_return": _safe_percent(loss_hits, len(outcomes)),
         "mean_return_pct": round(mean(returns), 4), "return_volatility_pct": round(volatility, 4),
-        "indicators": _technical_indicators(candles),
+        "indicators": indicators,
+        "technical_bias": technical_bias,
+        "decision_hint": decision_hint,
+        "bullish_checks": bullish_score,
+        "bearish_checks": bearish_score,
+        "target_hit_count": target_hits,
+        "target_zero_explanation": (
+            "در نمونه‌های تاریخی بررسی‌شده، هیچ بازه‌ای به این هدف نرسیده؛ احتمال تجربی صفر است، نه اثباتِ ناممکن‌بودن."
+            if target_hits == 0 else None
+        ),
         "method": "Historical frequency baseline + technical indicators",
         "warning": "Descriptive historical frequencies, not calibrated forecasts. Technical indicators are lagging and do not guarantee future outcomes.",
     }

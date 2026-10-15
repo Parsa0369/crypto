@@ -79,10 +79,13 @@ def create_app(password: str | None = None) -> Flask:
                 raise ValueError("حداقل هدف باید بین صفر تا ۱۰۰ درصد باشد.")
             candles = fetch_hourly_klines(symbol)
             result = analyze(candles, horizon, target)
+            latest = candles[-1]
             result["symbol"] = symbol
-            result["source"] = candles[-1].get("source", "Unknown")
-            result["currency"] = candles[-1].get("currency", "USDT")
-            result["last_candle_time_ms"] = candles[-1]["open_time"]
+            result["source"] = latest.get("source", "Unknown")
+            result["currency"] = latest.get("currency", "USDT")
+            result["last_candle_time_ms"] = latest["open_time"]
+            result["snapshot_generated_at"] = latest.get("snapshot_generated_at")
+            result["runner_shutdown_at"] = latest.get("runner_shutdown_at")
             return jsonify(result)
         except (ValueError, MarketDataError) as exc:
             return jsonify({"error": str(exc)}), 400

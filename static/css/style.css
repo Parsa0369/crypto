@@ -202,3 +202,17 @@ input:focus, select:focus {
   .panel:hover, .metric-card:hover { transform: none; }
   .hero-chip { transform: none; }
 }
+
+
+/* Lightweight CSS-built 3D accents — no images, textures, or external models. */
+:root{--depth-cyan:#63e8ff;--depth-violet:#9d8cff}
+.hero{position:relative;isolation:isolate}
+.hero:after{content:"₿";position:absolute;left:clamp(8px,4vw,54px);top:50%;width:76px;height:76px;display:grid;place-items:center;border-radius:50%;font:800 38px/1 "Segoe UI",sans-serif;color:#d8fbff;background:radial-gradient(circle at 30% 25%,#e6fdff 0,#7eeeff 8%,#2a6f9e 28%,#18294e 57%,#0b1020 72%);border:2px solid #8eeeff99;box-shadow:inset -10px -10px 18px #030817aa,inset 5px 5px 12px #ffffff55,0 14px 30px #42cfff35,0 0 0 8px #62e7ff0b;transform:translateY(-50%) rotateY(-20deg) rotateX(12deg);animation:coin-float 6s ease-in-out infinite;z-index:-1;pointer-events:none}
+.panel,.metric-card{position:relative;transform-style:preserve-3d;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+.panel:hover,.metric-card:hover{transform:perspective(900px) translateY(-3px) rotateX(.6deg);border-color:#526b95;box-shadow:0 16px 34px #0004,0 0 22px #7c91ff0b}
+.panel-heading .step{box-shadow:inset 1px 1px 0 #ffffff12,0 5px 12px #0003;transform:translateZ(8px)}
+.metric-card:after{content:"";position:absolute;top:12px;left:13px;width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,#d9faff,#66dcff 36%,#6575ee 70%,#252b5d);box-shadow:inset -3px -3px 5px #11193699,0 5px 12px #4ddcff2b;transform:rotate(35deg) skew(-5deg,-5deg);opacity:.85;pointer-events:none}
+.price-icon{transform:perspective(400px) rotateY(-18deg) rotateX(8deg);box-shadow:inset -7px -6px 10px #080d1866,0 9px 18px #0004,0 0 18px #8b9cff18}
+@keyframes coin-float{0%,100%{translate:0 0;rotate:0deg}50%{translate:0 -8px;rotate:3deg}}
+@media(max-width:700px){.hero:after{width:48px;height:48px;font-size:24px;left:16px;opacity:.75}.panel:hover,.metric-card:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.hero:after{animation:none}.panel,.metric-card{transition:none}}

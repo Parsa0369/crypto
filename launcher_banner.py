@@ -92,18 +92,18 @@ def windows_logo_3d(ansi_enabled: bool) -> str:
             if light is not None:
                 if ansi_enabled:
                     color = ramp[min(int(light * len(ramp)), len(ramp) - 1)]
-                    line.append(f"\\033[38;5;{color}m█")
+                    line.append(f"\033[38;5;{color}m█")
                 else:
                     line.append("#")
             elif _pane(x - 2, y - 1) is not None:
                 if ansi_enabled:
-                    line.append(f"\\033[38;5;{depth_color}m▒")
+                    line.append(f"\033[38;5;{depth_color}m▒")
                 else:
                     line.append(":")
             else:
                 line.append(" ")
         rows.append("".join(line) + reset)
-    return "\\n".join(rows)
+    return "\n".join(rows)
 
 
 def main() -> None:

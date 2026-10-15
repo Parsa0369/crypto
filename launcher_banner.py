@@ -30,11 +30,20 @@ def enable_terminal_colors() -> bool:
         return True
 
     try:
-        kernel32 = ctypes.windll.kernel32
-        stdout_handle = kernel32.GetStdHandle(-11)
-        mode = ctypes.c_uint()
-        if not kernel32.GetConsoleMode(stdout_handle, ctypes.byref(mode)):
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetStdHandle.argtypes = [ctypes.c_ulong]
+        kernel32.GetStdHandle.restype = ctypes.c_void_p
+        kernel32.GetConsoleMode.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+        kernel32.GetConsoleMode.restype = ctypes.c_int
+        kernel32.SetConsoleMode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+        kernel32.SetConsoleMode.restype = ctypes.c_int
+
+        # STD_OUTPUT_HANDLE is the unsigned DWORD value 0xFFFFFFF5 (-11).
+        stdout_handle = kernel32.GetStdHandle(ctypes.c_ulong(0xFFFFFFF5))
+        mode = ctypes.c_ulong()
+        if not stdout_handle or not kernel32.GetConsoleMode(stdout_handle, ctypes.byref(mode)):
             return False
+
         # ENABLE_VIRTUAL_TERMINAL_PROCESSING
         return bool(kernel32.SetConsoleMode(stdout_handle, mode.value | 0x0004))
     except Exception:

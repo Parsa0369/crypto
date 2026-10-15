@@ -4,6 +4,7 @@ from functools import wraps
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from .analysis import analyze
+from .backtesting import run_ema_backtest
 from .market_data import MarketDataError, fetch_hourly_klines, get_runner_status, get_supported_symbols
 from .deep_analysis import get_scan_state, start_scan
 
@@ -127,5 +128,29 @@ def create_app(password: str | None = None) -> Flask:
         except Exception:
             app.logger.exception("Unexpected analysis failure")
             return jsonify({"error": "Unexpected server error. Check local logs."}), 500
+
+
+    @app.post("/api/backtest")
+    @login_required
+    def backtest_market():
+        body = request.get_json(silent=True) or {}
+        symbol = str(body.get("symbol", "BTCUSDT")).upper().strip()
+        if not symbol.endswith("USDT") or not symbol.isalnum() or not 5 <= len(symbol) <= 20:
+            return jsonify({"error": "نماد معتبر USDT وارد کن؛ مثلاً BTCUSDT."}), 400
+        try:
+            fee_pct = float(body.get("fee_pct", 0.1))
+            if not 0 <= fee_pct <= 2:
+                raise ValueError("کارمزد باید بین صفر تا ۲ درصد برای هر سمت باشد.")
+            candles = fetch_hourly_klines(symbol)
+            result = run_ema_backtest(candles, fee_pct)
+            result["symbol"] = symbol
+            result["source"] = candles[-1].get("source", "Unknown")
+            result["last_candle_time_ms"] = candles[-1].get("open_time")
+            return jsonify(result)
+        except (ValueError, MarketDataError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception:
+            app.logger.exception("Unexpected backtest failure")
+            return jsonify({"error": "خطای داخلی در بک‌تست؛ گزارش محلی را بررسی کن."}), 500
 
     return app

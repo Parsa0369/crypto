@@ -53,7 +53,6 @@ def create_app(password: str | None = None) -> Flask:
     def deep_analysis_page():
         return render_template("deep_analysis.html")
 
-
     @app.get("/market-chart")
     @login_required
     def market_chart_page():
@@ -68,9 +67,9 @@ def create_app(password: str | None = None) -> Flask:
                 session.clear()
                 session["authenticated"] = True
                 session.permanent = True
-                return redirect(url_for("index"))
+                return render_template("login.html", transition=True, error=None)
             error = "رمز عبور نادرست است."
-        return render_template("login.html", error=error)
+        return render_template("login.html", transition=False, error=error)
 
     @app.post("/logout")
     @login_required
@@ -139,7 +138,6 @@ def create_app(password: str | None = None) -> Flask:
         except Exception:
             app.logger.exception("Unexpected analysis failure")
             return jsonify({"error": "Unexpected server error. Check local logs."}), 500
-
 
     @app.post("/api/backtest")
     @login_required

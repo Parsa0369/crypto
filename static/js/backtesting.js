@@ -22,6 +22,10 @@ btForm.addEventListener("submit",async e=>{
   bt$("bt-return").textContent=btPct(d.strategy_return_pct);bt$("bt-benchmark").textContent=btPct(d.buy_and_hold_return_pct);bt$("bt-dd").textContent=btPct(d.max_drawdown_pct);bt$("bt-count").textContent=btFmt(d.trade_count,0);bt$("bt-win").textContent=btPct(d.win_rate_pct);bt$("bt-average").textContent=btPct(d.average_trade_return_pct);
   bt$("bt-meta").textContent=d.symbol+" · "+btFmt(d.candles,0)+" کندل";drawEquity(d.equity_curve);
   bt$("bt-note").textContent=d.note||"نتیجهٔ تاریخی است، نه تضمین آینده.";
+  const vb=d.vectorbt_crosscheck||{};
+  bt$("bt-vectorbt").textContent=vb.available
+    ? "بررسی vectorbt — بازده: "+btPct(vb.total_return_pct)+"؛ بیشترین افت: "+btPct(vb.max_drawdown_pct)+"؛ تعداد معاملات: "+btFmt(vb.trade_count,0)+". "+(vb.note||"")
+    : "بررسی متقابل vectorbt فعال نیست؛ "+(vb.reason||"نسخهٔ داخلی بک‌تست استفاده شد.");
   const tbody=bt$("bt-trades");tbody.replaceChildren();
   if(!d.trades||!d.trades.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=6;td.textContent="در بازهٔ داده‌شده معاملهٔ فرضی ثبت نشد.";tr.appendChild(td);tbody.appendChild(tr)}
   else for(const t of [...d.trades].reverse()){const tr=document.createElement("tr");const values=[t.entry_index,t.exit_index,btFmt(t.entry_price,8),btFmt(t.exit_price,8),btPct(t.return_pct),btFmt(t.duration_hours,0)];values.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===4)td.className=Number(t.return_pct)>=0?"positive":"negative";tr.appendChild(td)});tbody.appendChild(tr)}

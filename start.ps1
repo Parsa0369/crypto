@@ -263,7 +263,7 @@ if (Test-Path "launcher_banner.py") {
 $basicFetchExe = Join-Path $PSScriptRoot ".venv\Scripts\basicfetch.exe"
 if (Test-Path $basicFetchExe) {
     try {
-        & $basicFetchExe --no-clear
+        & $basicFetchExe --no-clear --logo windows
         if ($LASTEXITCODE -ne 0) {
             Write-Host "  BasicFetch logo skipped; continuing launch." -ForegroundColor DarkGray
         }

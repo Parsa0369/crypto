@@ -18,6 +18,11 @@ class AnalysisTests(unittest.TestCase):
             self.assertGreaterEqual(result[key], 0)
             self.assertLessEqual(result[key], 100)
         self.assertGreater(result["sample_count"], 20)
+        self.assertGreaterEqual(result["technical_score"], -100)
+        self.assertLessEqual(result["technical_score"], 100)
+        self.assertIn("market_regime", result)
+        self.assertIn("historical_return_median_pct", result)
+        self.assertIn("signal_reasons", result)
 
     def test_invalid_horizon_rejected(self):
         with self.assertRaises(ValueError):

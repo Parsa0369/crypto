@@ -11,6 +11,7 @@ BINANCE_URLS = (
     "https://api3.binance.com/api/v3/klines",
 )
 KRAKEN_OHLC_URL = "https://api.kraken.com/0/public/OHLC"
+BYBIT_KLINE_URL = "https://api.bybit.com/v5/market/kline"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
 SNAPSHOT_URL = "https://raw.githubusercontent.com/Parsa0369/crypto/market-data-snapshot/data/market_snapshot.json"
 TIMEOUT_SECONDS = 10
@@ -33,6 +34,33 @@ def _parse_binance(payload: list) -> list[dict]:
         except (TypeError, ValueError, IndexError):
             continue
     return candles
+
+
+
+def _fetch_bybit(session: requests.Session, symbol: str, limit: int) -> list[dict]:
+    """Fetch hourly spot candles from Bybit."""
+    response = session.get(
+        BYBIT_KLINE_URL,
+        params={"category": "spot", "symbol": symbol, "interval": "60", "limit": min(limit, 1000)},
+        timeout=TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("retCode") != 0:
+        raise MarketDataError(f"Bybit: {str(payload.get('retMsg', 'request failed'))[:160]}")
+    rows = (payload.get("result") or {}).get("list") or []
+    candles = []
+    for row in rows:
+        try:
+            candles.append({
+                "open_time": int(row[0]), "open": float(row[1]),
+                "high": float(row[2]), "low": float(row[3]), "close": float(row[4]),
+                "volume": float(row[5]), "source": "Bybit", "currency": "USDT",
+            })
+        except (TypeError, ValueError, IndexError):
+            continue
+    return sorted(candles, key=lambda item: item["open_time"])[-limit:]
+
 
 
 def _fetch_kraken(session: requests.Session, symbol: str) -> list[dict]:
@@ -153,6 +181,7 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
                 errors.append(f"Binance {url.split('/')[2]}: {type(exc).__name__}")
 
         for provider, fetch in (
+            ("Bybit", lambda: _fetch_bybit(session, symbol, limit)),
             ("Kraken", lambda: _fetch_kraken(session, symbol)),
             ("Yahoo Finance", lambda: _fetch_yahoo(session, symbol, limit)),
             ("GitHub Actions snapshot", lambda: _fetch_actions_snapshot(session, symbol, limit)),
@@ -194,26 +223,26 @@ def get_runner_status() -> dict:
 
 
 def get_supported_symbols() -> list[dict]:
-    """Return the currently trading Binance spot USDT pairs for the search box."""
-    url = "https://api.binance.com/api/v3/exchangeInfo"
+    """Read exchange symbols discovered by the scheduled runner; do not query exchanges here."""
     try:
-        response = requests.get(url, timeout=TIMEOUT_SECONDS,
+        response = requests.get(SNAPSHOT_URL, params={"symbols": "1"}, timeout=6,
                                 headers={"User-Agent": "CryptoPulse/0.3"})
         response.raise_for_status()
-        payload = response.json()
-        symbols = []
-        for item in payload.get("symbols", []):
-            if (item.get("status") == "TRADING"
-                    and item.get("quoteAsset") == "USDT"
-                    and item.get("isSpotTradingAllowed", True)):
-                symbol = item.get("symbol", "")
-                if symbol and symbol.isalnum():
-                    symbols.append({"symbol": symbol, "base": item.get("baseAsset", "")})
-        if symbols:
-            return sorted(symbols, key=lambda item: item["symbol"])
+        snapshot = response.json()
+        symbols = snapshot.get("symbols", [])
+        if isinstance(symbols, list) and symbols:
+            valid = [
+                {"symbol": item["symbol"], "base": item.get("base", ""),
+                 "exchange": item.get("exchange", "market runner")}
+                for item in symbols
+                if isinstance(item, dict) and isinstance(item.get("symbol"), str)
+                and item["symbol"].isalnum() and item["symbol"].endswith("USDT")
+            ]
+            if valid:
+                return sorted(valid, key=lambda item: item["symbol"])
     except (requests.RequestException, ValueError, TypeError):
         pass
-    # Keep the dashboard usable if exchangeInfo is temporarily unreachable.
-    return [{"symbol": symbol, "base": symbol[:-4]} for symbol in
+    # Fallback list is used only until the scheduled runner publishes its first symbol list.
+    return [{"symbol": symbol, "base": symbol[:-4], "exchange": "fallback"} for symbol in
             ("BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
              "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "LTCUSDT")]

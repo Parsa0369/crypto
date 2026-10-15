@@ -1,0 +1,5 @@
+# Optional advanced analytics (not required to launch the basic dashboard)
+# Install with: python -m pip install -r requirements-advanced.txt
+pandas>=2.0,<3.0
+pandas-ta-classic>=0.3.15
+vectorbt>=0.26,<1.0

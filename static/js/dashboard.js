@@ -105,6 +105,19 @@ form.addEventListener("submit", async (event) => {
     $("volatility").textContent = pct(data.return_volatility_pct);
     $("method").textContent = data.method;
     $("warning").textContent = data.warning;
+    const wf = data.walk_forward_validation || {};
+    $("wf-windows").textContent = fmt(wf.test_windows, 0);
+    $("wf-status").textContent = wf.status === "ok" ? "تکمیل شد" : "داده ناکافی";
+    $("wf-note").textContent = wf.note || "";
+    const wfBox = $("wf-models");
+    wfBox.replaceChildren();
+    (wf.models || []).forEach(model => {
+      const row = document.createElement("p");
+      row.textContent = model.name + " — MAE: " + fmt(model.mae_pct_points, 4) +
+        " واحد درصد؛ دقت جهت: " + fmt(model.directional_accuracy_pct) + "%؛ پنجره‌ها: " +
+        fmt(model.test_windows, 0);
+      wfBox.appendChild(row);
+    });
     $("ema20").textContent = fmt(indicators.ema_20, 6);
     $("ema50").textContent = fmt(indicators.ema_50, 6);
     $("ema200").textContent = fmt(indicators.ema_200, 6);

@@ -144,23 +144,59 @@ def main() -> None:
                 time.sleep(0.08)
 
         print()
-        bar_width = 28
-        steps = 12  # 12 x 100 ms = 1.2 seconds for each bar.
-        for index in range(1, 11):
-            if interactive:
-                for step in range(steps + 1):
-                    filled = round(bar_width * step / steps)
-                    bar = "#" * filled + "." * (bar_width - filled)
-                    percent = round(100 * step / steps)
-                    row = f"\r  [{green}{bar}{reset}] {green}{percent:3d}%  MODULE {index:02d}/10{reset}"
-                    sys.stdout.write(row)
+        # Ten connected stages, with a soft blue gradient; each stage takes 1.5 seconds.
+        steps = 10
+        cell = 4
+        width = steps * cell
+        total = width * 8
+        partial = " ▏▎▍▌▋▊▉"
+        top = [231, 195, 195, 159, 159, 153, 153, 117, 117, 111]
+        body = [159, 153, 117, 117, 111, 81, 81, 75, 75, 74]
+        bottom = [74, 68, 68, 67, 67, 61, 61, 24, 24, 24]
+        track = [235, 237, 233]
+        rows = [top, body, bottom]
+
+        def render_progress(eighths: int) -> str:
+            output = []
+            for row_index, ramp in enumerate(rows):
+                line = ["  "]
+                for position in range(width):
+                    amount = max(0, min(8, eighths - position * 8))
+                    color = ramp[min(position // cell, len(ramp) - 1)]
+                    if position % cell == cell - 1:
+                        color = max(16, color - 1) if color > 16 else color
+                    if amount == 8:
+                        line.append(f"\\033[38;5;{color}m█")
+                    elif amount == 0:
+                        line.append(f"\\033[38;5;{track[row_index]}m█")
+                    else:
+                        line.append(
+                            f"\\033[38;5;{color}m\\033[48;5;{track[row_index]}m{partial[amount]}{reset}"
+                        )
+                line.append(reset)
+                output.append("".join(line))
+            percent = eighths * 100 // total
+            stage = min(steps, eighths // (cell * 8) + (1 if eighths % (cell * 8) else 0))
+            output.append(f"  {green}{percent:3d}%{reset}   STAGE {stage}/{steps}")
+            return "\\n".join(output)
+
+        if interactive and ansi_enabled:
+            sys.stdout.write(hide_cursor)
+            try:
+                for amount in range(total + 1):
+                    if amount:
+                        sys.stdout.write("\\033[4A")
+                    sys.stdout.write(render_progress(amount) + "\\n")
                     sys.stdout.flush()
-                    if step < steps:
-                        time.sleep(0.1)
-                print()
-            else:
-                bar = "#" * bar_width
-                print(f"  [{bar}] 100%  MODULE {index:02d}/10")
+                    if amount < total:
+                        time.sleep((steps * 1.5) / total)
+            finally:
+                sys.stdout.write(show_cursor)
+                sys.stdout.flush()
+        else:
+            print("  [########################################] 100%   STAGE 10/10")
+            if interactive:
+                time.sleep(steps * 1.5)
 
         print(f"{green}{bold}  READY{reset}")
         print()

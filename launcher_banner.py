@@ -107,12 +107,12 @@ def crypto_plus_logo(ansi_enabled: bool) -> str:
                     color = edge_color if _edge(x, y) else ramp[
                         min(int(light * len(ramp)), len(ramp) - 1)
                     ]
-                    line.append(f"\\033[38;5;{color}m█")
+                    line.append(f"\033[38;5;{color}m█")
                 else:
                     line.append("#")
             elif _face(x - 2, y - 1) is not None:
                 if ansi_enabled:
-                    line.append(f"\\033[38;5;{depth_color}m▒")
+                    line.append(f"\033[38;5;{depth_color}m▒")
                 else:
                     line.append(":")
             else:
@@ -123,11 +123,11 @@ def crypto_plus_logo(ansi_enabled: bool) -> str:
     padding = " " * max(0, (width - len(title)) // 2)
     if ansi_enabled:
         rows.append("")
-        rows.append(f"{padding}\\033[1;38;5;117m{title}{RESET}")
+        rows.append(f"{padding}\033[1;38;5;117m{title}{RESET}")
     else:
         rows.append("")
         rows.append(f"{padding}{title}")
-    return "\\n".join(rows)
+    return "\n".join(rows)
 
 
 def main() -> None:

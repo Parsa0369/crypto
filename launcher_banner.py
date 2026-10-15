@@ -166,27 +166,27 @@ def main() -> None:
                     if position % cell == cell - 1:
                         color = max(16, color - 1) if color > 16 else color
                     if amount == 8:
-                        line.append(f"\\033[38;5;{color}m█")
+                        line.append(f"\033[38;5;{color}m█")
                     elif amount == 0:
-                        line.append(f"\\033[38;5;{track[row_index]}m█")
+                        line.append(f"\033[38;5;{track[row_index]}m█")
                     else:
                         line.append(
-                            f"\\033[38;5;{color}m\\033[48;5;{track[row_index]}m{partial[amount]}{reset}"
+                            f"\033[38;5;{color}m\033[48;5;{track[row_index]}m{partial[amount]}{reset}"
                         )
                 line.append(reset)
                 output.append("".join(line))
             percent = eighths * 100 // total
             stage = min(steps, eighths // (cell * 8) + (1 if eighths % (cell * 8) else 0))
             output.append(f"  {green}{percent:3d}%{reset}   STAGE {stage}/{steps}")
-            return "\\n".join(output)
+            return "\n".join(output)
 
         if interactive and ansi_enabled:
             sys.stdout.write(hide_cursor)
             try:
                 for amount in range(total + 1):
                     if amount:
-                        sys.stdout.write("\\033[4A")
-                    sys.stdout.write(render_progress(amount) + "\\n")
+                        sys.stdout.write("\033[4A")
+                    sys.stdout.write(render_progress(amount) + "\n")
                     sys.stdout.flush()
                     if amount < total:
                         time.sleep((steps * 1.5) / total)

@@ -26,6 +26,7 @@ def _parse_binance(payload: list) -> list[dict]:
                 "open_time": int(row[0]), "open": float(row[1]),
                 "high": float(row[2]), "low": float(row[3]),
                 "close": float(row[4]), "volume": float(row[5]),
+                "source": "Binance", "currency": "USDT",
             })
         except (TypeError, ValueError, IndexError):
             continue
@@ -53,6 +54,7 @@ def _fetch_kraken(session: requests.Session, symbol: str) -> list[dict]:
                 "open_time": int(row[0]) * 1000, "open": float(row[1]),
                 "high": float(row[2]), "low": float(row[3]),
                 "close": float(row[4]), "volume": float(row[6]),
+                "source": "Kraken", "currency": quote,
             })
         except (TypeError, ValueError, IndexError):
             continue
@@ -60,7 +62,6 @@ def _fetch_kraken(session: requests.Session, symbol: str) -> list[dict]:
 
 
 def _fetch_yahoo(session: requests.Session, symbol: str, limit: int) -> list[dict]:
-    # Yahoo Finance uses USD tickers such as BTC-USD rather than BTCUSDT.
     base = symbol[:-4]
     ticker = f"{base}-USD"
     response = session.get(
@@ -90,6 +91,7 @@ def _fetch_yahoo(session: requests.Session, symbol: str, limit: int) -> list[dic
                 "open_time": int(stamp) * 1000, "open": float(opens[i]),
                 "high": float(highs[i]), "low": float(lows[i]),
                 "close": float(closes[i]), "volume": float(volumes[i] or 0),
+                "source": "Yahoo Finance", "currency": "USD",
             })
         except (TypeError, ValueError, IndexError):
             continue

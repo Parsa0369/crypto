@@ -31,3 +31,174 @@
 
 /* Navigation link sizing */
 .top-actions>a.ghost-button{text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+
+
+/* CryptoPulse 3D refresh — lightweight CSS depth, no image assets required */
+:root {
+  --cp-cyan: #55e7ff;
+  --cp-violet: #9b8cff;
+  --cp-glow: rgba(85, 231, 255, .16);
+}
+body {
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(72, 91, 190, .22), transparent 32rem),
+    radial-gradient(ellipse at 88% 38%, rgba(27, 191, 195, .10), transparent 30rem),
+    linear-gradient(145deg, #060a14 0%, #0a1020 48%, #080d18 100%);
+  background-attachment: fixed;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .18;
+  background-image: linear-gradient(rgba(133, 158, 214, .12) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(133, 158, 214, .12) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+.topbar {
+  background: rgba(7, 12, 25, .78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom-color: rgba(139, 156, 255, .16);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .18);
+}
+.brand-mark {
+  transform: perspective(500px) rotateY(-12deg) rotateX(7deg);
+  box-shadow: 0 12px 0 #3b4ca5, 0 17px 28px rgba(104, 125, 239, .32), inset 0 2px 0 rgba(255,255,255,.6);
+  transition: transform .28s ease, box-shadow .28s ease;
+}
+.brand:hover .brand-mark {
+  transform: perspective(500px) rotateY(12deg) rotateX(-5deg) translateY(-3px);
+  box-shadow: 0 7px 0 #3b4ca5, 0 23px 34px rgba(104, 125, 239, .38), inset 0 2px 0 rgba(255,255,255,.6);
+}
+.hero { perspective: 1100px; }
+.hero > div:first-child { animation: cp-rise-in .65s both ease-out; }
+.hero-chip {
+  background: linear-gradient(135deg, rgba(85,223,176,.12), rgba(85,231,255,.04));
+  box-shadow: 0 10px 0 rgba(26, 91, 88, .28), 0 18px 36px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.12);
+  transform: perspective(700px) rotateY(-9deg) rotateX(4deg);
+}
+.panel, .metric-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(23, 34, 57, .96), rgba(10, 17, 31, .97));
+  border-color: rgba(145, 166, 220, .19);
+  box-shadow: 0 2px 0 rgba(160, 180, 255, .10), 0 15px 0 rgba(3, 6, 15, .22), 0 25px 42px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.055);
+  transform: translateY(0) perspective(1000px) rotateX(0deg);
+  transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease;
+}
+.panel::before, .metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(119, 224, 255, .58), rgba(160, 143, 255, .35), transparent);
+  opacity: .7;
+  pointer-events: none;
+}
+.panel:hover, .metric-card:hover {
+  transform: translateY(-4px) perspective(1000px) rotateX(.6deg);
+  border-color: rgba(115, 220, 255, .34);
+  box-shadow: 0 3px 0 rgba(85,231,255,.14), 0 18px 0 rgba(3,6,15,.18), 0 32px 50px rgba(0,0,0,.32), 0 0 25px rgba(85,231,255,.055), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.controls { transform-style: preserve-3d; }
+.controls .panel-heading, .panel-heading { position: relative; }
+.step {
+  box-shadow: 0 3px 0 rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.08);
+  background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.015));
+}
+input, select {
+  background: linear-gradient(145deg, #0c1527, #080e1a);
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.28), 0 1px 0 rgba(255,255,255,.025);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+input:focus, select:focus {
+  border-color: rgba(85,231,255,.65);
+  box-shadow: 0 0 0 3px rgba(85,231,255,.09), 0 0 20px rgba(85,231,255,.07), inset 0 2px 7px rgba(0,0,0,.24);
+}
+.primary-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(115deg, #7c91ff 0%, #9eabff 42%, #7ee8f2 100%);
+  box-shadow: 0 5px 0 #4a5bb3, 0 12px 24px rgba(104,125,239,.23), inset 0 1px 0 rgba(255,255,255,.55);
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #4a5bb3, 0 18px 28px rgba(104,125,239,.30), inset 0 1px 0 rgba(255,255,255,.65);
+  filter: saturate(1.12);
+}
+.primary-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #4a5bb3, 0 5px 12px rgba(104,125,239,.18);
+}
+.price-panel {
+  background: radial-gradient(ellipse at 90% 20%, rgba(85,231,255,.11), transparent 40%), linear-gradient(145deg, #192644, #0e1729 70%);
+}
+.price-icon {
+  position: relative;
+  flex: 0 0 55px;
+  border: 1px solid rgba(139,156,255,.3);
+  background: linear-gradient(145deg, rgba(139,156,255,.26), rgba(85,231,255,.07));
+  box-shadow: 0 5px 0 rgba(62,77,147,.55), 0 12px 25px rgba(75,104,213,.22), inset 0 1px 0 rgba(255,255,255,.22);
+  transform: perspective(450px) rotateY(-15deg) rotateX(9deg);
+  animation: cp-float 4s ease-in-out infinite;
+}
+.metric-card strong { text-shadow: 0 0 20px rgba(85,223,176,.12); }
+.forecast-card {
+  background: radial-gradient(ellipse at 100% 0%, rgba(139,156,255,.18), transparent 55%), linear-gradient(145deg, #1a2644, #10182b);
+}
+.indicator-grid > div {
+  background: linear-gradient(145deg, rgba(6,12,24,.72), rgba(17,27,46,.62));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 3px 0 rgba(0,0,0,.12);
+  transition: transform .2s ease, border-color .2s ease;
+}
+.indicator-grid > div:hover {
+  transform: translateY(-2px);
+  border-color: rgba(85,231,255,.24);
+}
+.target-curve-track {
+  background: rgba(255,255,255,.065);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.25);
+}
+.target-curve-fill {
+  background: linear-gradient(90deg, #7288ff, #55e7ff);
+  box-shadow: 0 0 12px rgba(85,231,255,.22);
+}
+.runner-banner {
+  background: linear-gradient(100deg, rgba(17,26,43,.94), rgba(12,22,39,.82));
+  backdrop-filter: blur(14px);
+  border-bottom-color: rgba(139,156,255,.13);
+}
+.ghost-button {
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.ghost-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(85,231,255,.36);
+  background: rgba(85,231,255,.05);
+  color: var(--text);
+}
+@keyframes cp-float {
+  0%, 100% { transform: perspective(450px) rotateY(-15deg) rotateX(9deg) translateY(0); }
+  50% { transform: perspective(450px) rotateY(-8deg) rotateX(13deg) translateY(-5px); }
+}
+@keyframes cp-rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media (max-width: 850px) {
+  .panel:hover, .metric-card:hover { transform: none; }
+  .hero-chip { transform: none; }
+}

@@ -156,6 +156,7 @@ if ($installedHash -ne $requirementsHash) {
 
     # Try several China-hosted PyPI mirrors in sequence for networks where one mirror is blocked.
     $mirrors = @(
+        @{ Name = "Liara Iran PyPI mirror"; Url = "https://package-mirror.liara.ir/repository/pypi/simple/" },
         @{ Name = "Aliyun China mirror"; Url = "https://mirrors.aliyun.com/pypi/simple/" },
         @{ Name = "Huawei Cloud China mirror"; Url = "https://repo.huaweicloud.com/repository/pypi/simple/" },
         @{ Name = "Tencent China mirror"; Url = "https://mirrors.cloud.tencent.com/pypi/simple/" },
@@ -182,6 +183,7 @@ if ($installedHash -ne $requirementsHash) {
         Write-Host "  China mirrors failed; checking HTTPS and collecting pip diagnostics..." -ForegroundColor Yellow
 
         foreach ($url in @(
+            "https://package-mirror.liara.ir/repository/pypi/simple/flask/",
             "https://mirrors.aliyun.com/pypi/simple/flask/",
             "https://pypi.tuna.tsinghua.edu.cn/simple/flask/",
             "https://repo.huaweicloud.com/repository/pypi/flask/"
@@ -208,7 +210,7 @@ if ($installedHash -ne $requirementsHash) {
             "-vv"
         )
         try {
-            Invoke-QuietProcess -File $venvPython -Arguments $diagnosticArgs -Message "Detailed dependency retry (Aliyun)" -LogPath $diagnosticLog -MaxAttempts 1 -SuppressFailureOutput
+            Invoke-QuietProcess -File $venvPython -Arguments $diagnosticArgs -Message "Detailed dependency retry (Liara)" -LogPath $diagnosticLog -MaxAttempts 1 -SuppressFailureOutput
             $installed = $true
         } catch {
             Write-Host "  Automatic diagnostic retry failed. Last pip messages:" -ForegroundColor Red

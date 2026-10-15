@@ -203,7 +203,8 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
     # Show the historical frequency across target levels, in 5-point increments.
     # These are descriptive frequencies, not calibrated future probabilities.
     target_curve = []
-    for level in range(5, 101, 5):
+    target_levels_to_scan = [target_pct] + [level for level in range(5, 101, 5) if level > target_pct]
+    for level in target_levels_to_scan:
         hits = sum(
             max(highs[i + 1:i + horizon_hours + 1]) >= closes[i] * (1.0 + level / 100.0)
             for i in range(len(closes) - horizon_hours)

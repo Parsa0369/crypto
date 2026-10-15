@@ -259,18 +259,25 @@ if (Test-Path "launcher_banner.py") {
     }
 }
 
-# Show the OS/system ASCII logo. Keep launch resilient if BasicFetch has an issue.
-$basicFetchExe = Join-Path $PSScriptRoot ".venv\Scripts\basicfetch.exe"
-if (Test-Path $basicFetchExe) {
-    try {
-        & $basicFetchExe --no-clear --logo windows
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  BasicFetch logo skipped; continuing launch." -ForegroundColor DarkGray
-        }
-    } catch {
-        Write-Host "  BasicFetch logo skipped; continuing launch." -ForegroundColor DarkGray
-    }
+# Draw a Windows-style logo with native PowerShell colors.
+# Native Write-Host avoids ANSI escape sequences showing as literal text in Windows PowerShell.
+$windowsLogo = @(
+    @{ Left = "        "; Right = "        " },
+    @{ Left = "   ████████"; Right = "████████   " },
+    @{ Left = "  █████████"; Right = "█████████  " },
+    @{ Left = " ██████████"; Right = "██████████ " },
+    @{ Left = "███████████"; Right = "███████████" },
+    @{ Left = "███████████"; Right = "███████████" },
+    @{ Left = " ██████████"; Right = "██████████ " },
+    @{ Left = "  █████████"; Right = "█████████  " },
+    @{ Left = "   ████████"; Right = "████████   " }
+)
+Write-Host ""
+foreach ($logoLine in $windowsLogo) {
+    Write-Host $logoLine.Left -NoNewline -ForegroundColor Blue
+    Write-Host $logoLine.Right -ForegroundColor Cyan
 }
+Write-Host "             WINDOWS" -ForegroundColor Cyan
 
 Write-Host ""
 Write-Host "  ✦ Launching CryptoPulse..." -ForegroundColor Magenta

@@ -87,6 +87,16 @@ form.addEventListener("submit", async (event) => {
     $("down-prob").textContent = pct(data.probability_negative_return);
     $("technical-bias").textContent = data.technical_bias || "—";
     $("decision-hint").textContent = data.decision_hint || "این برآورد توصیه قطعی خرید یا فروش نیست.";
+    $("technical-score").textContent = data.technical_score === undefined ? "—" : fmt(data.technical_score, 0);
+    $("market-regime").textContent = data.market_regime || "—";
+    const reasonsBox = $("signal-reasons");
+    reasonsBox.replaceChildren();
+    (data.signal_reasons || []).forEach(item => {
+      const row = document.createElement("p");
+      row.className = item.effect === "positive" ? "reason-positive" : "reason-negative";
+      row.textContent = (item.effect === "positive" ? "＋ " : "− ") + item.reason + " (" + item.points + ")";
+      reasonsBox.appendChild(row);
+    });
     $("target-zero-note").textContent = data.target_zero_explanation || "";
     $("rsi").textContent = fmt(indicators.rsi_14);
     $("target-caption").textContent = "هدف +" + fmt(data.target_pct) + "% در " + fmt(data.horizon_hours) + " ساعت";
@@ -97,6 +107,17 @@ form.addEventListener("submit", async (event) => {
     $("warning").textContent = data.warning;
     $("ema20").textContent = fmt(indicators.ema_20, 6);
     $("ema50").textContent = fmt(indicators.ema_50, 6);
+    $("ema200").textContent = fmt(indicators.ema_200, 6);
+    $("atr-pct").textContent = pct(indicators.atr_pct);
+    $("volume-ratio").textContent = indicators.volume_ratio_20 == null ? "—" : fmt(indicators.volume_ratio_20) + "×";
+    $("return-24h").textContent = pct(indicators.return_24h_pct);
+    $("return-72h").textContent = pct(indicators.return_72h_pct);
+    $("bb-percent-b").textContent = fmt(indicators.bollinger_percent_b, 3);
+    $("bb-width").textContent = pct(indicators.bollinger_width_pct);
+    $("adx-proxy").textContent = fmt(indicators.adx_proxy_14);
+    $("return-p10").textContent = pct(data.historical_return_p10_pct);
+    $("return-median").textContent = pct(data.historical_return_median_pct);
+    $("return-p90").textContent = pct(data.historical_return_p90_pct);
     $("macd").textContent = fmt(indicators.macd, 6);
     $("macd-signal").textContent = fmt(indicators.macd_signal, 6);
     $("macd-histogram").textContent = fmt(indicators.macd_histogram, 6);

@@ -68,66 +68,42 @@ def make_logo() -> list[str]:
     ]
 
 
-def _plus(x: int, y: int) -> bool:
-    """Return whether a point belongs to the flat plus shape."""
-    horizontal = 2 <= x <= 43 and 7 <= y <= 13
-    vertical = 16 <= x <= 29 and 0 <= y <= 20
-    return horizontal or vertical
-
-
-def _face(x: int, y: int) -> float | None:
-    """Return 0..1 lighting when a point lies on the front face."""
-    scale = 1 - 0.18 * max(0, x - 2) / 41
-    adjusted_y = 10 + (y - 10) / scale
-    if not _plus(x, round(adjusted_y)):
+def _pane(x: int, y: int) -> float | None:
+    """Return a 0..1 lighting value when a point lies on the front of the Windows mark."""
+    if not (2 <= x <= 21 or 24 <= x <= 43):
         return None
-    return (max(0, x - 2) / 41) * 0.5 + (max(0, adjusted_y) / 20) * 0.5
+    scale = 1 - 0.22 * (x - 2) / 41
+    adjusted_y = 11.5 + (y - 11.5) / scale
+    if not (1 <= adjusted_y < 11 or 12 <= adjusted_y <= 22.5):
+        return None
+    return ((x - 2) / 41) * 0.5 + ((adjusted_y - 1) / 21.5) * 0.5
 
 
-def _edge(x: int, y: int) -> bool:
-    """Identify the bright bevel along the upper edge."""
-    return _face(x, y) is not None and _face(x, y - 1) is None
-
-
-def crypto_plus_logo(ansi_enabled: bool) -> str:
-    """Render the CryptoPlus plus-mark with a blue gradient and 3D depth."""
-    width, height = 52, 22
-    ramp = (231, 195, 159, 153, 117, 111, 81, 75, 74)
-    edge_color = 231
+def windows_logo_3d(ansi_enabled: bool) -> str:
+    """Render a perspective Windows logo with a blue light gradient and dark depth."""
+    ramp = (195, 159, 153, 117, 111, 81, 75, 74)
     depth_color = 24
     reset = RESET if ansi_enabled else ""
     rows = []
-
-    for y in range(height):
+    for y in range(27):
         line = []
-        for x in range(width):
-            light = _face(x, y)
+        for x in range(50):
+            light = _pane(x, y)
             if light is not None:
                 if ansi_enabled:
-                    color = edge_color if _edge(x, y) else ramp[
-                        min(int(light * len(ramp)), len(ramp) - 1)
-                    ]
-                    line.append(f"\033[38;5;{color}m█")
+                    color = ramp[min(int(light * len(ramp)), len(ramp) - 1)]
+                    line.append(f"\\033[38;5;{color}m█")
                 else:
                     line.append("#")
-            elif _face(x - 2, y - 1) is not None:
+            elif _pane(x - 2, y - 1) is not None:
                 if ansi_enabled:
-                    line.append(f"\033[38;5;{depth_color}m▒")
+                    line.append(f"\\033[38;5;{depth_color}m▒")
                 else:
                     line.append(":")
             else:
                 line.append(" ")
         rows.append("".join(line) + reset)
-
-    title = "C R Y P T O   P L U S"
-    padding = " " * max(0, (width - len(title)) // 2)
-    if ansi_enabled:
-        rows.append("")
-        rows.append(f"{padding}\033[1;38;5;117m{title}{RESET}")
-    else:
-        rows.append("")
-        rows.append(f"{padding}{title}")
-    return "\n".join(rows)
+    return "\\n".join(rows)
 
 
 def main() -> None:
@@ -224,8 +200,8 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        print(crypto_plus_logo(ansi_enabled))
-        print(f"{green}{bold}          CRYPTOPLUS // SYSTEM ONLINE{reset}")
+        print(windows_logo_3d(ansi_enabled))
+        print(f"{green}{bold}          MICROSOFT WINDOWS{reset}")
         print()
     finally:
         if show_cursor:

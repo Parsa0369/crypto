@@ -25,3 +25,9 @@
 .backtest-chart circle { fill: #55dfb0; }
 .backtest-page .status { padding: 10px 12px; border: 1px solid #354663; border-radius: 10px; background: #080d18; }
 .backtest-page .status.error { border-color: #ff7e91; color: #ff9baa; }
+
+
+/* CSS-only 3D bars for the historical backtest page. */
+.backtest-page .hero:after{content:"";width:82px;height:82px;border:0;border-radius:14px;background:linear-gradient(135deg,#8af3ff,#4a70d9 48%,#26285f);box-shadow:inset -12px -12px 0 #10193666,inset 7px 7px 0 #ffffff33,12px 15px 0 #111a2b,15px 18px 0 #283a62,0 20px 32px #3e80ff33;transform:translateY(-50%) rotate(28deg) skewY(-8deg);opacity:.95}
+.backtest-page .backtest-metrics .metric-card:nth-child(odd){border-bottom:2px solid #61e8ff88}
+.backtest-chart{box-shadow:inset 0 0 25px #3b5caa12,0 8px 18px #0003}

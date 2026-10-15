@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import requests
+import time
 
 BINANCE_URLS = (
     "https://api.binance.com/api/v3/klines",
@@ -175,7 +176,7 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
 def get_runner_status() -> dict:
     """Read the public snapshot metadata for the dashboard countdown."""
     try:
-        response = requests.get(SNAPSHOT_URL, params={"status": "1"}, timeout=6,
+        response = requests.get(SNAPSHOT_URL, params={"status": str(int(time.time() // 60))}, timeout=6,
                                 headers={"User-Agent": "CryptoPulse/0.3"})
         response.raise_for_status()
         snapshot = response.json()

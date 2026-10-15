@@ -170,3 +170,23 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
         "The scheduled runner must have completed at least one successful refresh. "
         f"Details: {detail}"
     )
+
+
+def get_runner_status() -> dict:
+    """Read the public snapshot metadata for the dashboard countdown."""
+    try:
+        response = requests.get(SNAPSHOT_URL, params={"status": "1"}, timeout=6,
+                                headers={"User-Agent": "CryptoPulse/0.3"})
+        response.raise_for_status()
+        snapshot = response.json()
+        return {
+            "generated_at": snapshot.get("generated_at"),
+            "runner_started_at": snapshot.get("runner_started_at"),
+            "runner_shutdown_at": snapshot.get("runner_shutdown_at"),
+            "refresh_interval_seconds": snapshot.get("refresh_interval_seconds", 900),
+            "has_data": bool(snapshot.get("assets")),
+        }
+    except (requests.RequestException, ValueError):
+        return {"generated_at": None, "runner_started_at": None,
+                "runner_shutdown_at": None, "refresh_interval_seconds": 900,
+                "has_data": False, "unavailable": True}

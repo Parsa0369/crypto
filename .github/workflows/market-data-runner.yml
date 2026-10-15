@@ -1,0 +1,71 @@
+name: Windows market-data runner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crypto-market-data-runner
+  cancel-in-progress: true
+
+jobs:
+  refresh-market-snapshot:
+    # GitHub-hosted Windows runners are temporary; this job refreshes data for up to ~5h40m.
+    runs-on: windows-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt --retries 4 --timeout 60
+
+      - name: Set runner countdown window
+        shell: pwsh
+        run: |
+          $start = [DateTime]::UtcNow
+          $end = $start.AddMinutes(340)
+          "RUNNER_STARTED_AT=$($start.ToString('o'))" >> $env:GITHUB_ENV
+          "RUNNER_SHUTDOWN_AT=$($end.ToString('o'))" >> $env:GITHUB_ENV
+          Write-Host "This temporary runner is scheduled to stop around $($end.ToString('u')) UTC."
+
+      - name: Refresh data every 15 minutes until runner shutdown
+        shell: pwsh
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          $deadline = [DateTime]::UtcNow.AddMinutes(340)
+          while ([DateTime]::UtcNow -lt $deadline) {
+            python scripts/update_market_snapshot.py
+            if ($LASTEXITCODE -eq 0) {
+              git add data/market_snapshot.json
+              git diff --cached --quiet
+              if ($LASTEXITCODE -ne 0) {
+                git commit -m "Refresh public market snapshot"
+                if ($LASTEXITCODE -eq 0) {
+                  git push
+                }
+              }
+            } else {
+              Write-Warning "Market refresh failed; the next 15-minute attempt will retry."
+            }
+
+            $remaining = ($deadline - [DateTime]::UtcNow).TotalSeconds
+            if ($remaining -le 0) { break }
+            Start-Sleep -Seconds ([Math]::Min(900, [Math]::Max(1, [int]$remaining)))
+          }
+          Write-Host "Runner refresh window ended; GitHub will shut down this hosted runner."

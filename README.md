@@ -1,1 +1,68 @@
-# crypto
+# CryptoPulse
+
+**A local-first cryptocurrency market research dashboard for Windows.** CryptoPulse retrieves public market candles, computes transparent historical statistics, and displays them in a Persian right-to-left web interface.
+
+> **Risk notice:** This is an educational software prototype, not financial advice. Historical frequencies are not calibrated forecasts and do not guarantee future prices or profit. No trading, wallet connection, or exchange account access is implemented.
+
+## Features
+- Windows PowerShell launcher; local dashboard bound to 127.0.0.1.
+- Hidden password prompt and password-hash verification.
+- Public hourly OHLCV market data (no API key required for this endpoint).
+- Historical up/down frequencies, target-touch frequency, negative-return frequency, volatility, and RSI(14).
+- Selectable asset, target return, and forecast horizon (up to 7 days in this MVP).
+- Optional C++17 RSI implementation in native/.
+- Unit tests for basic analysis behavior.
+
+## Requirements
+- Windows 10/11
+- Python 3.10 or newer
+- Internet connection for public market data
+- PowerShell; Git Bash is optional
+
+## Quick start (PowerShell)
+```powershell
+git clone https://github.com/Parsa0369/crypto.git
+cd crypto
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\start.ps1
+```
+The script creates a local virtual environment, installs dependencies, and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically.
+
+## Manual start
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
+```
+
+## Tests
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+## How estimates work
+The first version is deliberately a **historical-frequency baseline, not a machine-learning model**. For each completed historical window, it records whether the closing price finished up or down and whether the hourly high touched the selected target. The dashboard reports observed frequencies across the available sample and RSI(14). See docs/methodology.md for definitions and limitations.
+
+Adjacent windows overlap and are not independent; historical frequencies must not be treated as reliable future probabilities without rigorous out-of-sample validation and calibration. Hourly data is not suitable for precise second-by-second forecasting.
+
+## Project layout
+```text
+backend/       Market data and analysis
+native/        Optional C++17 indicator library
+templates/     Persian RTL HTML pages
+static/        CSS and JavaScript
+tests/         Unit tests
+docs/          Architecture and methodology
+run.py         Local launcher
+start.ps1      Windows setup and launcher
+```
+
+## Network and privacy
+- The dashboard binds only to 127.0.0.1.
+- Public market candles are fetched from Binance's public market-data endpoint.
+- No API secret, wallet seed, or exchange trading credential is requested.
+- Do not deploy Flask's development server publicly.
+- Dependency downloads use the configured package index. Do not install packages from untrusted mirrors.
+
+## License
+MIT; see LICENSE.

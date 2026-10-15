@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CryptoPulse | بک‌تست آموزشی</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/backtesting.css') }}">
+  <script defer src="{{ url_for('static', filename='js/backtesting.js') }}"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="/"><span class="brand-mark small">₿</span> CryptoPulse</a><div class="top-actions"><a class="ghost-button" href="/">داشبورد</a><a class="ghost-button" href="/deep-analysis">تحلیل خدایی ✦</a><span class="local-badge"><i></i> فقط محلی</span><form method="post" action="/logout"><button class="ghost-button" type="submit">خروج</button></form></div></header>
+<main class="container backtest-page">
+  <section class="hero"><div><p class="eyebrow">HISTORICAL STRATEGY EVALUATION</p><h1>آزمایش استراتژی</h1><p class="muted">بک‌تست آموزشی روی کندل‌های تاریخی؛ بدون اتصال حساب، کیف پول یا ارسال سفارش.</p></div><div class="hero-chip">● شبیه‌سازی تاریخی</div></section>
+  <section class="panel backtest-controls">
+    <div class="panel-heading"><div><p class="eyebrow">CONFIGURATION</p><h2>تنظیمات بک‌تست</h2></div><span class="step">01</span></div>
+    <form id="backtest-form" class="backtest-form">
+      <div><label for="bt-symbol">نماد USDT</label><input id="bt-symbol" value="BTCUSDT" required maxlength="20" autocomplete="off"></div>
+      <div><label for="bt-fee">کارمزد فرضی هر سمت (%)</label><input id="bt-fee" type="number" min="0" max="2" step="0.01" value="0.1" required></div>
+      <button id="bt-run" class="primary-button" type="submit">اجرای بک‌تست ←</button>
+    </form>
+    <p class="hint">استراتژی نمونه: تقاطع EMA 12 و EMA 26، فقط موقعیت فرضی خرید/خروج؛ بدون اهرم و فروش استقراضی. کارمزد واقعی و لغزش قیمت ممکن است فرق کند.</p>
+    <div id="bt-status" class="status" role="status">برای اجرای ارزیابی، نماد و کارمزد فرضی را انتخاب کن.</div>
+  </section>
+  <section class="metric-grid backtest-metrics">
+    <article class="metric-card"><span>بازده استراتژی</span><strong id="bt-return">—</strong><small>پس از کارمزدهای فرضی</small></article>
+    <article class="metric-card"><span>بازده نگهداری ساده</span><strong id="bt-benchmark">—</strong><small>مقایسهٔ همان تاریخچه</small></article>
+    <article class="metric-card"><span>بیشترین افت ثبت‌شده</span><strong id="bt-dd">—</strong><small>افت سرمایه در شبیه‌سازی</small></article>
+    <article class="metric-card"><span>تعداد معاملات فرضی</span><strong id="bt-count">—</strong><small>در تاریخچهٔ موجود</small></article>
+    <article class="metric-card"><span>نرخ معاملات مثبت</span><strong id="bt-win">—</strong><small>از معاملات بسته/ثبت‌شده</small></article>
+    <article class="metric-card"><span>میانگین بازده هر معامله</span><strong id="bt-average">—</strong><small>پس از کارمزد تخمینی</small></article>
+  </section>
+  <section class="panel"><div class="panel-heading"><div><p class="eyebrow">SIMULATED EQUITY</p><h2>منحنی سرمایهٔ فرضی</h2></div><span id="bt-meta" class="step">—</span></div><svg id="bt-chart" class="backtest-chart" viewBox="0 0 720 220" role="img" aria-label="نمودار منحنی سرمایه فرضی"><text x="360" y="110" text-anchor="middle">پس از اجرای بک‌تست نمودار نمایش داده می‌شود</text></svg><p id="bt-note" class="hint">نتیجهٔ گذشته، تضمین عملکرد آینده نیست. این صفحه صرفاً برای آموزش و مقایسهٔ تاریخی است.</p></section>
+  <section class="panel"><div class="panel-heading"><div><p class="eyebrow">RECENT SIMULATED TRADES</p><h2>آخرین معاملات فرضی</h2></div><span class="step">HISTORY</span></div><div class="table-scroll"><table class="backtest-table"><thead><tr><th>ورود</th><th>خروج</th><th>قیمت ورود</th><th>قیمت خروج</th><th>بازده خالص تخمینی</th><th>مدت (ساعت)</th></tr></thead><tbody id="bt-trades"><tr><td colspan="6">هنوز نتیجه‌ای ثبت نشده است.</td></tr></tbody></table></div></section>
+</main>
+</body></html>

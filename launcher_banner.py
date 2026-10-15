@@ -145,7 +145,7 @@ def main() -> None:
 
         print()
         bar_width = 28
-        steps = 33  # 33 x 100 ms = 3.3 seconds for each bar.
+        steps = 12  # 12 x 100 ms = 1.2 seconds for each bar.
         for index in range(1, 11):
             if interactive:
                 for step in range(steps + 1):

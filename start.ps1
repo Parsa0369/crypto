@@ -260,28 +260,5 @@ if (Test-Path "launcher_banner.py") {
     }
 }
 
-# Draw a filled, perspective-style four-pane Windows mark using ASCII only.
-# ASCII keeps the logo readable in Windows PowerShell 5.1 regardless of script encoding.
-Write-Host ""
-$windowsLogo = @(
-    "             #######   ###########",
-    "            ########   ############",
-    "           #########   #############",
-    "          ##########   ##############",
-    "          ##########   ##############",
-    "",
-    "          ##########   ##############",
-    "          ##########   ##############",
-    "           #########   #############",
-    "            ########   ############",
-    "             #######   ###########"
-)
-foreach ($line in $windowsLogo) {
-    Write-Host $line -ForegroundColor Green
-}
-Write-Host ""
-Write-Host "          MICROSOFT WINDOWS" -ForegroundColor Green
-
-Write-Host ""
 Write-Host "  [START] Launching CryptoPulse..." -ForegroundColor Green
 & $venvPython run.py

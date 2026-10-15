@@ -1,0 +1,10 @@
+{
+  "generated_at": null,
+  "runner_started_at": null,
+  "runner_shutdown_at": null,
+  "refresh_interval_seconds": 900,
+  "assets": {},
+  "errors": {
+    "status": "Waiting for the first successful Windows GitHub Actions runner refresh."
+  }
+}

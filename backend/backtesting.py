@@ -8,6 +8,41 @@ from __future__ import annotations
 from statistics import mean
 
 
+def _vectorbt_crosscheck(closes: list[float], fast: list[float], slow: list[float], fee: float) -> dict:
+    """Optionally cross-check the EMA simulation with vectorbt, if installed."""
+    try:
+        import pandas as pd
+        import vectorbt as vbt
+    except ImportError:
+        return {"available": False, "reason": "vectorbt یا pandas نصب نیست؛ بک‌تست داخلی استفاده شد."}
+
+    try:
+        entries = [False] * len(closes)
+        exits = [False] * len(closes)
+        for i in range(1, len(closes)):
+            entries[i] = fast[i - 1] <= slow[i - 1] and fast[i] > slow[i]
+            exits[i] = fast[i - 1] >= slow[i - 1] and fast[i] < slow[i]
+        close_series = pd.Series(closes, dtype="float64")
+        portfolio = vbt.Portfolio.from_signals(
+            close_series,
+            entries=pd.Series(entries),
+            exits=pd.Series(exits),
+            fees=fee,
+            freq="1h",
+        )
+        return {
+            "available": True,
+            "engine": "vectorbt",
+            "total_return_pct": round(float(portfolio.total_return()) * 100.0, 4),
+            "max_drawdown_pct": round(abs(float(portfolio.max_drawdown())) * 100.0, 4),
+            "trade_count": int(portfolio.trades.count()),
+            "win_rate_pct": round(float(portfolio.trades.win_rate()) * 100.0, 2) if int(portfolio.trades.count()) else None,
+            "note": "مقایسهٔ مستقل با vectorbt؛ اختلاف نتایج ممکن است از قواعد کارمزد و ارزش‌گذاری موقعیت باز ناشی شود.",
+        }
+    except Exception as exc:
+        return {"available": False, "reason": "vectorbt در این محیط قابل اجرا نبود: " + type(exc).__name__}
+
+
 def _ema(values: list[float], period: int) -> list[float]:
     if not values:
         return []
@@ -98,6 +133,7 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
             equity_curve[-1]["equity"] = round(equity * 100.0, 4)
 
     returns = [trade["return_pct"] for trade in trades]
+    vectorbt_check = _vectorbt_crosscheck(closes, fast, slow, fee)
     benchmark = (closes[-1] / closes[0] - 1.0) * 100.0
     return {
         "strategy": "EMA 12/26 crossover (long-only)",
@@ -110,6 +146,7 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
         "win_rate_pct": round(100.0 * sum(value > 0 for value in returns) / len(returns), 2) if returns else None,
         "average_trade_return_pct": round(mean(returns), 4) if returns else None,
         "equity_curve": equity_curve,
+        "vectorbt_crosscheck": vectorbt_check,
         "trades": trades[-20:],
         "note": "نتیجهٔ تاریخی و آموزشی است؛ کارمزد واقعی، اسپرد، لغزش قیمت و کیفیت اجرای سفارش ممکن است متفاوت باشد. هیچ سفارشی ارسال نمی‌شود.",
     }

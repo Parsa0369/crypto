@@ -53,6 +53,11 @@ def create_app(password: str | None = None) -> Flask:
     def deep_analysis_page():
         return render_template("deep_analysis.html")
 
+    @app.get("/behind-scenes")
+    @login_required
+    def behind_scenes_page():
+        return render_template("behind_scenes.html")
+
     @app.get("/market-chart")
     @login_required
     def market_chart_page():

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import re
 import shutil
 import sys
 import time
@@ -161,6 +162,26 @@ def crypto_plus_text(ansi_enabled: bool) -> str:
     return "\n".join(render_word("CRYPTO") + [""] + render_word("PLUS"))
 
 
+def print_animated_art(art: str, delay: float = 0.008) -> None:
+    """Reveal ANSI-colored logo art gradually without animating escape codes."""
+    ansi_token = re.compile(r"\\033\\[[0-?]*[ -/]*[@-~]")
+    for line in art.splitlines():
+        for part in ansi_token.split(line):
+            if not part:
+                continue
+            if ansi_token.fullmatch(part):
+                sys.stdout.write(part)
+                continue
+            for char in part:
+                sys.stdout.write(char)
+                if char not in (" ", "\\t"):
+                    sys.stdout.flush()
+                    if sys.stdout.isatty():
+                        time.sleep(delay)
+        sys.stdout.write("\\n")
+        sys.stdout.flush()
+
+
 def main() -> None:
     interactive = sys.stdout.isatty()
     ansi_enabled = enable_terminal_colors()
@@ -255,11 +276,13 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        print(windows_logo_3d(ansi_enabled))
-        print(f"{green}{bold}          MICROSOFT WINDOWS{reset}")
+        print_animated_art(windows_logo_3d(ansi_enabled), delay=0.004)
+        print_animated_art(f"{green}{bold}          MICROSOFT WINDOWS{reset}", delay=0.045)
         print()
-        print(crypto_plus_text(ansi_enabled))
+        print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)
         print()
+        if interactive:
+            time.sleep(3)
     finally:
         if show_cursor:
             sys.stdout.write(show_cursor + reset)

@@ -12,7 +12,7 @@ BINANCE_URLS = (
 )
 KRAKEN_OHLC_URL = "https://api.kraken.com/0/public/OHLC"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
-SNAPSHOT_URL = "https://raw.githubusercontent.com/Parsa0369/crypto/main/data/market_snapshot.json"
+SNAPSHOT_URL = "https://raw.githubusercontent.com/Parsa0369/crypto/market-data-snapshot/data/market_snapshot.json"
 TIMEOUT_SECONDS = 10
 
 

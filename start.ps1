@@ -24,27 +24,35 @@ function global:open { & '$projectScript' open }
     }
 } catch { }
 
-function Invoke-QuietProcess([string]$File, [string[]]$Arguments, [string]$Message, [string]$LogPath) {
-    Remove-Item $LogPath -Force -ErrorAction SilentlyContinue
+function Invoke-QuietProcess([string]$File, [string[]]$Arguments, [string]$Message, [string]$LogPath, [int]$MaxAttempts = 1) {
     $errorLog = "$LogPath.err"
-    Remove-Item $errorLog -Force -ErrorAction SilentlyContinue
-    $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -NoNewWindow -RedirectStandardOutput $LogPath -RedirectStandardError $errorLog
     $frames = @('◜','◠','◝','◞','◡','◟')
-    $i = 0
-    while (-not $process.HasExited) {
-        Write-Host ("  {0}  {1}   " -f $frames[$i % $frames.Count], $Message) -NoNewline -ForegroundColor Cyan
-        Start-Sleep -Milliseconds 110
-        Write-Host ([char]13) -NoNewline
-        $i++
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        Remove-Item $LogPath, $errorLog -Force -ErrorAction SilentlyContinue
+        $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -NoNewWindow -RedirectStandardOutput $LogPath -RedirectStandardError $errorLog
+        $i = 0
+        while (-not $process.HasExited) {
+            $suffix = if ($MaxAttempts -gt 1) { " (try $attempt/$MaxAttempts)" } else { "" }
+            Write-Host ("  {0}  {1}{2}   " -f $frames[$i % $frames.Count], $Message, $suffix) -NoNewline -ForegroundColor Cyan
+            Start-Sleep -Milliseconds 140
+            Write-Host ([char]13) -NoNewline
+            $i++
+            $process.Refresh()
+        }
+        $process.Refresh()
+        if ($process.ExitCode -eq 0) {
+            Write-Host ("  ✦  {0}   " -f $Message) -ForegroundColor Green
+            return
+        }
+        if ($attempt -lt $MaxAttempts) {
+            Write-Host ("  ↻  Retrying {0}..." -f $Message) -ForegroundColor Yellow
+            Start-Sleep -Seconds ([Math]::Min(3 * $attempt, 8))
+        }
     }
-    $process.Refresh()
-    if ($process.ExitCode -ne 0) {
-        Write-Host ""
-        if (Test-Path $LogPath) { Get-Content $LogPath -Tail 12 | Write-Host }
-        if (Test-Path $errorLog) { Get-Content $errorLog -Tail 12 | Write-Host }
-        throw "$Message failed. Details are shown above."
-    }
-    Write-Host ("  ✦  {0}   " -f $Message) -ForegroundColor Green
+    Write-Host ""
+    if (Test-Path $LogPath) { Get-Content $LogPath -Tail 12 | Write-Host }
+    if (Test-Path $errorLog) { Get-Content $errorLog -Tail 16 | Write-Host }
+    throw "$Message failed after $MaxAttempts attempts. Check the connection and try again."
 }
 
 Write-Host ""
@@ -56,7 +64,7 @@ Write-Host ""
 
 if ($Command -eq "open") {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw "Git for Windows is required for the open command." }
-    Invoke-QuietProcess -File (Get-Command git).Source -Arguments @("pull","--ff-only") -Message "Syncing GitHub" -LogPath (Join-Path $env:TEMP "cryptopulse-git.log")
+    Invoke-QuietProcess -File (Get-Command git).Source -Arguments @("pull","--ff-only") -Message "Syncing GitHub" -LogPath (Join-Path $env:TEMP "cryptopulse-git.log") -MaxAttempts 3
 }
 
 $python = Get-Command py -ErrorAction SilentlyContinue
@@ -75,7 +83,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 
 $venvPython = (Resolve-Path ".venv\Scripts\python.exe").Path
 $logPath = Join-Path $env:TEMP "cryptopulse-install.log"
-Invoke-QuietProcess -File $venvPython -Arguments @("-m","pip","install","-r","requirements.txt","--retries","4","--timeout","60","--disable-pip-version-check","-q") -Message "Preparing modules" -LogPath $logPath
+Invoke-QuietProcess -File $venvPython -Arguments @("-m","pip","install","-r","requirements.txt","--retries","8","--resume-retries","8","--timeout","90","--disable-pip-version-check","--no-warn-script-location","-q") -Message "Preparing modules" -LogPath $logPath -MaxAttempts 3
 
 Write-Host ""
 Write-Host "  ✦ Launching CryptoPulse..." -ForegroundColor Magenta

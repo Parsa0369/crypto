@@ -36,6 +36,15 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe run.py
 ```
 
+## Optional advanced analytics
+The base app runs without the extra analytics packages. To enable standard indicators from `pandas-ta-classic` and the optional independent EMA-backtest cross-check from `vectorbt`, install them inside the project virtual environment:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m pip install -r requirements-advanced.txt
+```
+
+The dashboard keeps its built-in indicator/backtest fallback if optional packages are unavailable or fail to initialize. `vectorbt` is used only to cross-check the educational simulation; no live orders are placed.
+
 ## Tests
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v

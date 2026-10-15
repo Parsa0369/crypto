@@ -1,7 +1,7 @@
 """Educational, long-only EMA crossover backtest.
 
-This module is an independent implementation inspired by common backtesting
-workflows. It does not import or copy Freqtrade code and never places orders.
+Independent implementation inspired by common backtesting workflows.
+No Freqtrade source is copied or imported, and no orders are ever placed.
 """
 from __future__ import annotations
 
@@ -19,14 +19,18 @@ def _ema(values: list[float], period: int) -> list[float]:
 
 
 def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
-    """Backtest an EMA(12)/EMA(26) crossover on completed hourly closes.
+    """Simulate EMA(12)/EMA(26) crossover entries/exits on hourly closes.
 
-    A position enters on a bullish cross and exits on a bearish cross. Fees are
-    charged on both entry and exit. No leverage, shorting, or live orders.
+    Entry and exit fees are applied to compounded equity. Open positions are
+    marked to market for drawdown measurements. No leverage or shorting.
     """
     if not 0 <= fee_pct <= 2:
         raise ValueError("fee_pct must be between 0 and 2")
-    closes = [float(c["close"]) for c in candles if float(c.get("close", 0)) > 0]
+    closes = [
+        float(c["close"])
+        for c in candles
+        if float(c.get("close", 0) or 0) > 0
+    ]
     if len(closes) < 60:
         raise ValueError("حداقل ۶۰ کندل معتبر برای بک‌تست لازم است.")
 
@@ -38,24 +42,23 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
     equity = 1.0
     peak = 1.0
     max_drawdown = 0.0
-    equity_curve = []
+    equity_curve = [{"index": 0, "equity": 100.0}]
     trades = []
     previous_difference = fast[0] - slow[0]
+    stride = max(1, len(closes) // 60)
 
-    # Start after warm-up; act on close-to-close crossover observations.
     for i in range(1, len(closes)):
         difference = fast[i] - slow[i]
+
         if not position and previous_difference <= 0 < difference:
             position = True
             entry_price = closes[i]
             entry_index = i
-            equity *= (1.0 - fee)
+            equity *= 1.0 - fee  # Entry fee.
         elif position and previous_difference >= 0 > difference:
             exit_price = closes[i]
-            gross_return = exit_price / entry_price - 1.0
             net_return = (1.0 - fee) * (exit_price / entry_price) * (1.0 - fee) - 1.0
-            equity *= (1.0 + gross_return) * (1.0 - fee)
-            # Entry fee was already deducted above.
+            equity *= (exit_price / entry_price) * (1.0 - fee)
             trades.append({
                 "entry_index": entry_index,
                 "exit_index": i,
@@ -65,18 +68,20 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
                 "duration_hours": i - entry_index,
             })
             position = False
-        peak = max(peak, equity)
-        max_drawdown = max(max_drawdown, (peak - equity) / peak if peak else 0.0)
-        if i % max(1, len(closes) // 60) == 0 or i == len(closes) - 1:
-            equity_curve.append({"index": i, "equity": round(equity * 100.0, 4)})
 
+        marked_equity = equity * (closes[i] / entry_price) if position else equity
+        peak = max(peak, marked_equity)
+        if peak:
+            max_drawdown = max(max_drawdown, (peak - marked_equity) / peak)
+
+        if i % stride == 0 or i == len(closes) - 1:
+            equity_curve.append({"index": i, "equity": round(marked_equity * 100.0, 4)})
         previous_difference = difference
 
     if position:
         exit_price = closes[-1]
-        gross_return = exit_price / entry_price - 1.0
         net_return = (1.0 - fee) * (exit_price / entry_price) * (1.0 - fee) - 1.0
-        equity *= (1.0 + gross_return) * (1.0 - fee)
+        equity *= (exit_price / entry_price) * (1.0 - fee)
         trades.append({
             "entry_index": entry_index,
             "exit_index": len(closes) - 1,
@@ -86,8 +91,10 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
             "duration_hours": len(closes) - 1 - entry_index,
             "open_at_end": True,
         })
+        if equity_curve:
+            equity_curve[-1]["equity"] = round(equity * 100.0, 4)
 
-    returns = [t["return_pct"] for t in trades]
+    returns = [trade["return_pct"] for trade in trades]
     benchmark = (closes[-1] / closes[0] - 1.0) * 100.0
     return {
         "strategy": "EMA 12/26 crossover (long-only)",
@@ -97,7 +104,7 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
         "buy_and_hold_return_pct": round(benchmark, 4),
         "max_drawdown_pct": round(max_drawdown * 100.0, 4),
         "trade_count": len(trades),
-        "win_rate_pct": round(100.0 * sum(x > 0 for x in returns) / len(returns), 2) if returns else None,
+        "win_rate_pct": round(100.0 * sum(value > 0 for value in returns) / len(returns), 2) if returns else None,
         "average_trade_return_pct": round(mean(returns), 4) if returns else None,
         "equity_curve": equity_curve,
         "trades": trades[-20:],

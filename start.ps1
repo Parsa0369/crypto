@@ -7,60 +7,73 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+# Register "open" in the user's PowerShell profile for future terminals.
+try {
+    $profilePath = $PROFILE.CurrentUserAllHosts
+    $profileDir = Split-Path -Parent $profilePath
+    if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory -Path $profileDir -Force | Out-Null }
+    if (-not (Test-Path $profilePath)) { New-Item -ItemType File -Path $profilePath -Force | Out-Null }
+    $profileText = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
+    if ($profileText -notmatch '# CryptoPulse open command') {
+        $projectScript = (Join-Path $PSScriptRoot 'start.ps1').Replace("'", "''")
+        Add-Content -Path $profilePath -Encoding UTF8 -Value @"
+
+# CryptoPulse open command
+function global:open { & '$projectScript' open }
+"@
+    }
+} catch { }
+
+function Invoke-QuietProcess([string]$File, [string[]]$Arguments, [string]$Message, [string]$LogPath) {
+    Remove-Item $LogPath -Force -ErrorAction SilentlyContinue
+    $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -NoNewWindow -RedirectStandardOutput $LogPath -RedirectStandardError $LogPath
+    $frames = @('◜','◠','◝','◞','◡','◟')
+    $i = 0
+    while (-not $process.HasExited) {
+        Write-Host ("  {0}  {1}   " -f $frames[$i % $frames.Count], $Message) -NoNewline -ForegroundColor Cyan
+        Start-Sleep -Milliseconds 110
+        Write-Host ([char]13) -NoNewline
+        $i++
+    }
+    $process.Refresh()
+    if ($process.ExitCode -ne 0) {
+        Write-Host ""
+        if (Test-Path $LogPath) { Get-Content $LogPath -Tail 18 | Write-Host }
+        throw "$Message failed. Details are shown above."
+    }
+    Write-Host ("  ✦  {0}   " -f $Message) -ForegroundColor Green
+}
+
 Write-Host ""
-Write-Host "   ____                  __        ____        " -ForegroundColor Cyan
-Write-Host "  / ___|_ __ _   _ _ __  / _|_   _ |  _ \ _   _|" -ForegroundColor Cyan
-Write-Host " | |   | '__| | | | '_ \| |_| | | || |_) | | | |" -ForegroundColor Blue
-Write-Host " | |___| |  | |_| | |_) |  _| |_| ||  __/| |_| |" -ForegroundColor Magenta
-Write-Host "  \____|_|   \__, | .__/|_|  \__, ||_|    \__, |" -ForegroundColor Magenta
-Write-Host "            |___/|_|          |___/        |___/" -ForegroundColor Cyan
-Write-Host "              CRYPTOPULSE  //  MARKET LAB" -ForegroundColor DarkCyan
+Write-Host "      .----------------------." -ForegroundColor DarkCyan
+Write-Host "      |   C R Y P T O P U L S E  |" -ForegroundColor Cyan
+Write-Host "      '----------------------'" -ForegroundColor DarkCyan
+Write-Host "            ◆  MARKET LAB" -ForegroundColor Magenta
 Write-Host ""
 
 if ($Command -eq "open") {
-    Write-Host "[OPEN] Syncing the latest project from GitHub..." -ForegroundColor Cyan
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw "Git was not found. Install Git for Windows, then retry."
-    }
-    git pull --ff-only
-    if ($LASTEXITCODE -ne 0) {
-        throw "git pull failed. Resolve local changes or branch conflicts, then run .\start.ps1 open again."
-    }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw "Git for Windows is required for the open command." }
+    Invoke-QuietProcess -File (Get-Command git).Source -Arguments @("pull","--ff-only") -Message "Syncing GitHub" -LogPath (Join-Path $env:TEMP "cryptopulse-git.log")
 }
 
 $python = Get-Command py -ErrorAction SilentlyContinue
 if ($python) { $pythonCommand = "py"; $pythonArgs = @("-3") }
 else {
     $python = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $python) { throw "Python 3.10+ was not found. Install Python from https://www.python.org/downloads/windows/ and retry." }
+    if (-not $python) { throw "Python 3.10+ was not found. Install Python, then retry." }
     $pythonCommand = "python"; $pythonArgs = @()
 }
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    Write-Host "[1/3] Creating virtual environment..."
+    Write-Host "  ✦ Preparing CryptoPulse..." -ForegroundColor Cyan
     & $pythonCommand @pythonArgs -m venv .venv
     if ($LASTEXITCODE -ne 0) { throw "Could not create Python virtual environment." }
-} else { Write-Host "[1/3] Virtual environment already exists." }
-
-$venvPython = ".\.venv\Scripts\python.exe"
-$packageIndex = "https://mirrors.aliyun.com/pypi/simple/"
-Write-Host "[2/3] Preparing pip and installing dependencies..."
-Write-Host "Using the Aliyun PyPI mirror: $packageIndex" -ForegroundColor DarkGray
-
-# Upgrade pip when possible, but don't block installation if the current pip is usable.
-& $venvPython -m pip install --upgrade pip --index-url $packageIndex --retries 5 --timeout 120
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Could not upgrade pip from the Aliyun mirror. Continuing with the version already installed."
 }
 
-& $venvPython -m pip install -r requirements.txt --index-url $packageIndex --retries 5 --timeout 120
-if ($LASTEXITCODE -ne 0) {
-    Write-Host ""
-    Write-Host "Dependency installation failed using the Aliyun PyPI mirror." -ForegroundColor Red
-    Write-Host "Check your internet connection and whether https://mirrors.aliyun.com/pypi/simple/ is reachable, then retry." -ForegroundColor Yellow
-    Write-Host "If your network requires a proxy, configure the correct proxy for pip; do not disable HTTPS certificate checks." -ForegroundColor Yellow
-    throw "Could not install Python dependencies. See the pip error above."
-}
+$venvPython = (Resolve-Path ".venv\Scripts\python.exe").Path
+$logPath = Join-Path $env:TEMP "cryptopulse-install.log"
+Invoke-QuietProcess -File $venvPython -Arguments @("-m","pip","install","-r","requirements.txt","--retries","4","--timeout","60","--disable-pip-version-check","-q") -Message "Preparing modules" -LogPath $logPath
 
-Write-Host "[3/3] Launching dashboard..."
+Write-Host ""
+Write-Host "  ✦ Launching CryptoPulse..." -ForegroundColor Magenta
 & $venvPython run.py

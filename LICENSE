@@ -26,14 +26,3 @@ CryptoPulse's educational backtesting module was independently written after
 reviewing public Freqtrade documentation. No Freqtrade source code is included
 or copied in this repository. This acknowledgement does not alter the MIT
 license above that applies to CryptoPulse's own code. See THIRD_PARTY_NOTICES.md.
-
-
-Third-party acknowledgement (informational only)
-------------------------------------------------
-Freqtrade is a separate open-source project licensed under the GNU General Public
-License, version 3 (GPL-3.0). Project: https://github.com/freqtrade/freqtrade
-
-CryptoPulse's educational backtesting module was independently written after
-reviewing public Freqtrade documentation. No Freqtrade source code is included
-or copied in this repository. This acknowledgement does not alter the MIT
-license above that applies to CryptoPulse's own code. See THIRD_PARTY_NOTICES.md.

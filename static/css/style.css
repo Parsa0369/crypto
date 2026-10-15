@@ -14,3 +14,16 @@
 @media(max-width:560px){.signal-reasons{grid-template-columns:1fr}}
 
 .forecast-card{border-color:#8b9cff55;background:linear-gradient(145deg,#1a2540,#111a2b)}.forecast-card strong{color:var(--accent)!important}.forecast-card small{display:block;line-height:1.8;margin-top:6px}
+
+
+/* Historical target-frequency scan */
+.target-curve-panel { margin-top: 1rem; }
+.target-curve-list { display: grid; gap: .55rem; margin-top: 1rem; }
+.target-curve-row { display: grid; grid-template-columns: 4.5rem minmax(3rem, 1fr) 4.5rem; align-items: center; gap: .7rem; }
+.target-curve-row > span { font-size: .9rem; direction: ltr; text-align: left; }
+.target-curve-row > strong { font-size: .9rem; direction: ltr; text-align: right; }
+.target-curve-track { height: .55rem; overflow: hidden; border-radius: 999px; background: var(--border, #e5e7eb); }
+.target-curve-fill { height: 100%; border-radius: inherit; background: var(--accent, #3b82f6); }
+@media (max-width: 480px) {
+  .target-curve-row { grid-template-columns: 3.5rem minmax(2rem, 1fr) 3.5rem; gap: .45rem; }
+}

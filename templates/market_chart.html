@@ -5,7 +5,7 @@
 <title>CryptoPulse | نمودار بازار</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/market-chart.css') }}">
-<script defer src="https://unpkg.com/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+
 <script defer src="{{ url_for('static', filename='js/market-chart.js') }}"></script>
 </head>
 <body>
@@ -17,8 +17,12 @@
 <div class="chart-field"><label for="chart-interval">بازهٔ زمانی</label><select id="chart-interval"><option value="1h">۱ ساعت</option><option value="4h">۴ ساعت</option><option value="1d">۱ روز</option></select></div>
 <button id="chart-load" class="primary-button" type="submit">بارگذاری نمودار <span>↻</span></button></form>
 <div class="chart-meta"><span id="chart-status" class="status" role="status">در حال آماده‌سازی نمودار…</span><span id="chart-source" class="source-label">منبع داده: —</span></div>
+<div class="tv-market-widget panel">
+  <div class="chart-heading"><div><p class="eyebrow">TRADINGVIEW LIVE MARKET</p><h2>بازار زنده از TradingView</h2></div><a class="chart-credit" href="https://www.tradingview.com/markets/cryptocurrencies/prices-all/" target="_blank" rel="noopener noreferrer">باز کردن بازار در TradingView ↗</a></div>
+  <div class="tv-widget-frame"><div class="tradingview-widget-container" id="tv-market-container"><div class="tradingview-widget-container__widget"></div><div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/markets/cryptocurrencies/prices-all/" rel="noopener noreferrer" target="_blank"><span>داده‌های بازار رمزارز در TradingView</span></a></div></div></div>
+</div>
 </section>
-<section class="panel chart-panel"><div class="chart-heading"><div><p class="eyebrow">OHLC PRICE HISTORY</p><h2 id="chart-title">BTCUSDT · کندل‌ها</h2></div><div class="chart-legend"><span><i class="legend-candle"></i> قیمت</span><span><i class="legend-ema"></i> EMA 20</span><span><i class="legend-ema slow"></i> EMA 50</span></div></div><div id="price-chart" class="price-chart" aria-label="نمودار کندل‌های قیمت"></div><div class="volume-heading">حجم معاملات</div><div id="volume-chart" class="volume-chart" aria-label="نمودار حجم معاملات"></div><div class="chart-stats"><div><span>آخرین قیمت بسته‌شدن</span><strong id="chart-last-price">—</strong></div><div><span>تغییر آخرین کندل</span><strong id="chart-change">—</strong></div><div><span>تعداد کندل‌ها</span><strong id="chart-count">—</strong></div></div></section>
+<section class="panel chart-panel"><div class="tv-note">بخش زیر، ویجت رسمی بازار TradingView است. نمودار تحلیلی CryptoPulse نیز پایین‌تر در دسترس است.</div><div class="chart-heading"><div><p class="eyebrow">OHLC PRICE HISTORY</p><h2 id="chart-title">BTCUSDT · کندل‌ها</h2></div><div class="chart-legend"><span><i class="legend-candle"></i> قیمت</span><span><i class="legend-ema"></i> EMA 20</span><span><i class="legend-ema slow"></i> EMA 50</span></div></div><div id="price-chart" class="price-chart" aria-label="نمودار کندل‌های قیمت"></div><div class="volume-heading">حجم معاملات</div><div id="volume-chart" class="volume-chart" aria-label="نمودار حجم معاملات"></div><div class="chart-stats"><div><span>آخرین قیمت بسته‌شدن</span><strong id="chart-last-price">—</strong></div><div><span>تغییر آخرین کندل</span><strong id="chart-change">—</strong></div><div><span>تعداد کندل‌ها</span><strong id="chart-count">—</strong></div></div></section>
 <section class="panel chart-note"><strong>راهنمای استفاده</strong><p>با اسکرول بزرگ‌نمایی و با کشیدن نمودار جابه‌جا شو. EMAها میانگین‌های متحرک نمایی‌اند و صرفاً برای مطالعهٔ روند نمایش داده می‌شوند.</p><p>داده‌ها از منبع عمومی بازار و در صورت نیاز از منابع جایگزین پروژه می‌آیند؛ ممکن است تأخیر داشته باشند. این نمودار ابزار آموزشی است، نه توصیهٔ خریدوفروش یا پیش‌بینی تضمین‌شده.</p><p class="chart-credit">نمودار با <a href="https://www.tradingview.com/lightweight-charts/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts</a> ساخته شده است.</p></section>
 <footer>CryptoPulse · بررسی داده‌های تاریخی · بدون اتصال حساب یا اجرای سفارش</footer>
 </main></body></html>

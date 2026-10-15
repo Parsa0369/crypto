@@ -51,12 +51,21 @@ def start_github_runner_if_configured() -> None:
 
 def main() -> None:
     print("\nCryptoPulse | Local market research dashboard")
-    password = getpass("Create dashboard password (hidden): ")
+    # GitHub Actions can provide PASS as an environment secret. A local shell
+    # cannot read GitHub Secrets automatically; absent PASS, prompt securely.
+    password = os.environ.get("PASS", "")
+    if password:
+        print("Using the dashboard password supplied by the PASS environment variable.")
+    else:
+        password = getpass("Create dashboard password (hidden): ")
+        if len(password) < 10:
+            raise SystemExit("Use a password with at least 10 characters.")
+        confirm = getpass("Confirm password: ")
+        if not secrets.compare_digest(password, confirm):
+            raise SystemExit("Passwords do not match.")
+
     if len(password) < 10:
         raise SystemExit("Use a password with at least 10 characters.")
-    confirm = getpass("Confirm password: ")
-    if not secrets.compare_digest(password, confirm):
-        raise SystemExit("Passwords do not match.")
 
     start_github_runner_if_configured()
 

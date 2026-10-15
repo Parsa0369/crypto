@@ -47,43 +47,69 @@ def enable_terminal_colors() -> bool:
         return False
 
 
-def _pane(x: int, y: int) -> float | None:
-    """Return a 0..1 lighting value when a point lies on the front of the Windows mark."""
-    if not (2 <= x <= 21 or 24 <= x <= 43):
-        return None
-    scale = 1 - 0.22 * (x - 2) / 41
-    adjusted_y = 11.5 + (y - 11.5) / scale
-    if not (1 <= adjusted_y < 11 or 12 <= adjusted_y <= 22.5):
-        return None
-    return ((x - 2) / 41) * 0.5 + ((adjusted_y - 1) / 21.5) * 0.5
+def razer_logo_3d(ansi_enabled: bool = True) -> str:
+    """Render a three-arm, acid-green 3D emblem."""
+    W, H = 46, 24
+    cx, cy = (W - 1) / 2, (H - 1) / 2
+    R = 7.6
+    SWEEP = 2.3
+    N = 90
+    ramp = (157, 120, 118, 82, 76, 70, 34, 28)
+    depth_color, eye_color = 22, 226
+    L = (-0.6, -0.8)
 
+    arms = []
+    for k in range(3):
+        a0 = k * 2 * math.pi / 3 - math.pi / 2
+        pts = []
+        for i in range(N + 1):
+            t = i / N
+            r = R * (0.10 + 0.90 * t)
+            a = a0 + SWEEP * t
+            width = 0.8 + 2.3 * t ** 2.4
+            pts.append((r * math.cos(a), r * math.sin(a), width, t))
+        arms.append(pts)
 
-def windows_logo_3d(ansi_enabled: bool) -> str:
-    """Render a perspective Windows logo with a blue light gradient and dark depth."""
-    ramp = (195, 159, 153, 117, 111, 81, 75, 74)
-    depth_color = 24
-    reset = RESET if ansi_enabled else ""
+    def sample(px, py):
+        best = None
+        for pts in arms:
+            for qx, qy, w, t in pts:
+                dx, dy = px - qx, py - qy
+                d = math.hypot(dx, dy)
+                if d <= w and (best is None or d / w < best[0]):
+                    nx, ny = dx / w, dy / w
+                    light = 0.55 + 0.45 * (nx * L[0] + ny * L[1]) - 0.25 * (d / w) ** 2
+                    best = (d / w, max(0.0, min(1.0, light)), t)
+        return best
+
+    def pixel(x, y):
+        return ((x - cx) / 2.0, y - cy)
+
+    eyes = set()
+    for pts in arms:
+        qx, qy, _, _ = pts[int(N * 0.9)]
+        eyes.add((round(qx * 2 + cx), round(qy + cy)))
+
     rows = []
-    for y in range(27):
+    reset = RESET if ansi_enabled else ""
+    for y in range(H):
         line = []
-        for x in range(50):
-            light = _pane(x, y)
-            if light is not None:
-                if ansi_enabled:
-                    color = ramp[min(int(light * len(ramp)), len(ramp) - 1)]
-                    line.append(f"\033[38;5;{color}m█")
+        for x in range(W):
+            hit = sample(*pixel(x, y))
+            if hit is not None:
+                if (x, y) in eyes and ansi_enabled:
+                    line.append(f"\\033[38;5;{eye_color}m●")
+                elif ansi_enabled:
+                    c = ramp[min(int((1 - hit[1]) * len(ramp)), len(ramp) - 1)]
+                    line.append(f"\\033[38;5;{c}m█")
                 else:
                     line.append("#")
-            elif _pane(x - 2, y - 1) is not None:
-                if ansi_enabled:
-                    line.append(f"\033[38;5;{depth_color}m▒")
-                else:
-                    line.append(":")
+            elif sample(*pixel(x - 2, y - 1)) is not None:
+                line.append(f"\\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
             else:
                 line.append(" ")
         rows.append("".join(line) + reset)
-    return "\n".join(rows)
-
+    return "\\n".join(rows)
 
 
 def crypto_plus_text(ansi_enabled: bool) -> str:
@@ -235,8 +261,8 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        print_animated_art(windows_logo_3d(ansi_enabled), delay=0.004)
-        print_animated_art(f"{green}{bold}          MICROSOFT WINDOWS{reset}", delay=0.045)
+        print_animated_art(razer_logo_3d(ansi_enabled), delay=0.004)
+        print_animated_art(f"{green}{bold}             RAZER{reset}", delay=0.045)
         print()
         print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)
         print()

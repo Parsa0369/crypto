@@ -43,6 +43,11 @@ def create_app(password: str | None = None) -> Flask:
             return redirect(url_for("login"))
         return render_template("dashboard.html")
 
+    @app.get("/backtesting")
+    @login_required
+    def backtesting_page():
+        return render_template("backtesting.html")
+
     @app.get("/deep-analysis")
     @login_required
     def deep_analysis_page():

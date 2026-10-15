@@ -4,6 +4,59 @@ const targetValue = document.getElementById("target-value");
 const button = document.getElementById("analyze-button");
 const statusBox = document.getElementById("status");
 const $ = (id) => document.getElementById(id);
+let runnerTimer = null;
+
+function paintRunnerStatus(data) {
+  const banner = $("runner-banner");
+  const title = $("runner-title");
+  const message = $("runner-message");
+  const countdown = $("runner-countdown");
+  if (runnerTimer) clearInterval(runnerTimer);
+  const shutdown = data && data.runner_shutdown_at ? Date.parse(data.runner_shutdown_at) : NaN;
+  const generated = data && data.generated_at ? Date.parse(data.generated_at) : NaN;
+  if (!Number.isFinite(shutdown)) {
+    banner.className = "runner-banner offline";
+    title.textContent = "Runner ویندوز هنوز آماده نیست";
+    message.textContent = data && data.unavailable
+      ? "وضعیت Runner از GitHub دریافت نشد؛ پس از اجرای Workflow اینجا نمایش داده می‌شود."
+      : "منتظر اولین اجرای موفق Workflow در GitHub Actions هستیم.";
+    countdown.textContent = "--:--:--";
+    return;
+  }
+  const tick = () => {
+    const remaining = Math.max(0, shutdown - Date.now());
+    const seconds = Math.floor(remaining / 1000);
+    const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
+    const mm = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+    const ss = String(seconds % 60).padStart(2, "0");
+    countdown.textContent = hh + ":" + mm + ":" + ss;
+    if (remaining > 0) {
+      banner.className = "runner-banner active";
+      title.textContent = "Runner ویندوز فعال است";
+      message.textContent = "تا خاموشی خودکار ماشین موقت GitHub Actions زمان باقی مانده است."
+        + (Number.isFinite(generated) ? " آخرین به‌روزرسانی داده: " + new Date(generated).toLocaleString() : "");
+    } else {
+      banner.className = "runner-banner offline";
+      title.textContent = "زمان اجرای این Runner تمام شده";
+      message.textContent = "داده‌های ذخیره‌شده ممکن است تا اجرای بعدی قابل استفاده باشند؛ اجرای زمان‌بندی‌شده بعدی ممکن است با تأخیر شروع شود.";
+    }
+  };
+  tick();
+  runnerTimer = setInterval(tick, 1000);
+}
+
+async function refreshRunnerStatus() {
+  try {
+    const response = await fetch("/api/runner-status", {cache:"no-store"});
+    if (!response.ok) throw new Error("Runner status unavailable");
+    paintRunnerStatus(await response.json());
+  } catch (_) {
+    paintRunnerStatus({unavailable:true});
+  }
+}
+refreshRunnerStatus();
+setInterval(refreshRunnerStatus, 60000);
+
 target.addEventListener("input", () => targetValue.textContent = target.value + "%");
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
@@ -49,6 +102,9 @@ form.addEventListener("submit", async (event) => {
     $("bb-middle").textContent = fmt(indicators.bollinger_middle, 6);
     $("bb-lower").textContent = fmt(indicators.bollinger_lower, 6);
     statusBox.textContent = "تحلیل تمام شد. شاخص‌ها اطلاعات کمکی‌اند و سیگنال قطعی خرید یا فروش نیستند.";
+    if (data.runner_shutdown_at) {
+      paintRunnerStatus({runner_shutdown_at:data.runner_shutdown_at, generated_at:data.snapshot_generated_at, has_data:true});
+    }
   } catch (error) { showError(error.message || "خطای ناشناخته؛ اتصال اینترنت را بررسی کنید."); }
   finally { button.disabled = false; button.firstChild.textContent = "شروع تحلیل "; }
 });

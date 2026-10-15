@@ -27,3 +27,7 @@
 @media (max-width: 480px) {
   .target-curve-row { grid-template-columns: 3.5rem minmax(2rem, 1fr) 3.5rem; gap: .45rem; }
 }
+
+
+/* Navigation link sizing */
+.top-actions>a.ghost-button{text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}

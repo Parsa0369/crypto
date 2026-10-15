@@ -166,18 +166,22 @@ def print_animated_art(art: str, delay: float = 0.008) -> None:
     """Reveal ANSI-colored logo art gradually without animating escape codes."""
     ansi_token = re.compile(r"\033\[[0-?]*[ -/]*[@-~]")
     for line in art.splitlines():
-        for part in ansi_token.split(line):
-            if not part:
-                continue
-            if ansi_token.fullmatch(part):
-                sys.stdout.write(part)
-                continue
-            for char in part:
+        cursor = 0
+        for match in ansi_token.finditer(line):
+            for char in line[cursor:match.start()]:
                 sys.stdout.write(char)
                 if char not in (" ", "\t"):
                     sys.stdout.flush()
                     if sys.stdout.isatty():
                         time.sleep(delay)
+            sys.stdout.write(match.group())
+            cursor = match.end()
+        for char in line[cursor:]:
+            sys.stdout.write(char)
+            if char not in (" ", "\t"):
+                sys.stdout.flush()
+                if sys.stdout.isatty():
+                    time.sleep(delay)
         sys.stdout.write("\n")
         sys.stdout.flush()
 

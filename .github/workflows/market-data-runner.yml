@@ -52,19 +52,15 @@ jobs:
           while ([DateTime]::UtcNow -lt $deadline) {
             python scripts/update_market_snapshot.py
             if ($LASTEXITCODE -eq 0) {
+              git checkout --orphan market-data-snapshot-temp
+              git rm -rf --cached .
               git add data/market_snapshot.json
-              git diff --cached --quiet
-              if ($LASTEXITCODE -ne 0) {
-                git commit -m "Refresh public market snapshot"
-                if ($LASTEXITCODE -eq 0) {
-                  git pull --rebase origin main
-                  if ($LASTEXITCODE -eq 0) {
-                    git push
-                  } else {
-                    Write-Warning "Could not rebase onto the latest main branch; this refresh will be retried next cycle."
-                  }
-                }
+              git commit -m "Update latest public market snapshot"
+              if ($LASTEXITCODE -eq 0) {
+                git push --force origin HEAD:market-data-snapshot
               }
+              git checkout main
+              git branch -D market-data-snapshot-temp
             } else {
               Write-Warning "Market refresh failed; the next 15-minute attempt will retry."
             }

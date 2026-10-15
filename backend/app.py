@@ -14,7 +14,7 @@ def create_app(password: str | None = None) -> Flask:
     app.config.update(
         SECRET_KEY=os.environ.get("CRYPTOPULSE_SECRET_KEY") or os.urandom(32),
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict",
-        SESSION_COOKIE_SECURE=False, PERMANENT_SESSION_LIFETIME=1800,
+        SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "false").lower() == "true", PERMANENT_SESSION_LIFETIME=1800,
         DASHBOARD_PASSWORD_HASH=generate_password_hash(password or "disabled"),
         MAX_CONTENT_LENGTH=16 * 1024,
     )
@@ -58,40 +58,6 @@ def create_app(password: str | None = None) -> Flask:
     @login_required
     def market_chart_page():
         return render_template("market_chart.html")
-
-    @app.get("/api/chart-data")
-    @login_required
-    def chart_data():
-        symbol = str(request.args.get("symbol", "BTCUSDT")).upper().strip()
-        interval = str(request.args.get("interval", "1h"))
-        if interval not in {"1h", "4h", "1d"}:
-            return jsonify({"error": "بازهٔ زمانی معتبر نیست."}), 400
-        try:
-            candles = fetch_hourly_klines(symbol, limit=1000)
-            step_ms = {"1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}[interval]
-            grouped = {}
-            for candle in candles:
-                bucket = (int(candle["open_time"]) // step_ms) * step_ms
-                if bucket not in grouped:
-                    grouped[bucket] = {"time": bucket // 1000, "open": candle["open"], "high": candle["high"],
-                                       "low": candle["low"], "close": candle["close"], "volume": candle.get("volume", 0)}
-                else:
-                    item = grouped[bucket]
-                    item["high"] = max(item["high"], candle["high"])
-                    item["low"] = min(item["low"], candle["low"])
-                    item["close"] = candle["close"]
-                    item["volume"] += candle.get("volume", 0)
-            rows = sorted(grouped.values(), key=lambda item: item["time"])
-            if len(rows) < 2:
-                raise MarketDataError("برای رسم نمودار دادهٔ کافی موجود نیست.")
-            return jsonify({"symbol": symbol, "interval": interval, "source": candles[-1].get("source", "Unknown"),
-                            "currency": candles[-1].get("currency", "USDT"), "candles": rows,
-                            "last_updated_ms": candles[-1].get("open_time")})
-        except (ValueError, MarketDataError) as exc:
-            return jsonify({"error": str(exc)}), 400
-        except Exception:
-            app.logger.exception("Unexpected chart data failure")
-            return jsonify({"error": "دریافت دادهٔ نمودار ناموفق بود؛ گزارش محلی را بررسی کن."}), 500
 
     @app.route("/login", methods=["GET", "POST"])
     def login():

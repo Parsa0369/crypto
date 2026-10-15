@@ -148,17 +148,17 @@ def crypto_plus_text(ansi_enabled: bool) -> str:
                 if (x, y) in points:
                     if ansi_enabled:
                         color = edge_color if (x, y - 1) not in points else ramp[min(y, len(ramp) - 1)]
-                        line.append(f"\\033[38;5;{color}m█")
+                        line.append(f"\033[38;5;{color}m█")
                     else:
                         line.append("#")
                 elif (x - dx, y - dy) in points:
-                    line.append(f"\\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
+                    line.append(f"\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
                 else:
                     line.append(" ")
             rows.append(" " * pad + "".join(line) + reset)
         return rows
 
-    return "\\n".join(render_word("CRYPTO") + [""] + render_word("PLUS"))
+    return "\n".join(render_word("CRYPTO") + [""] + render_word("PLUS"))
 
 
 def main() -> None:

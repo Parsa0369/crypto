@@ -98,18 +98,18 @@ def razer_logo_3d(ansi_enabled: bool = True) -> str:
             hit = sample(*pixel(x, y))
             if hit is not None:
                 if (x, y) in eyes and ansi_enabled:
-                    line.append(f"\\033[38;5;{eye_color}m●")
+                    line.append(f"\033[38;5;{eye_color}m●")
                 elif ansi_enabled:
                     c = ramp[min(int((1 - hit[1]) * len(ramp)), len(ramp) - 1)]
-                    line.append(f"\\033[38;5;{c}m█")
+                    line.append(f"\033[38;5;{c}m█")
                 else:
                     line.append("#")
             elif sample(*pixel(x - 2, y - 1)) is not None:
-                line.append(f"\\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
+                line.append(f"\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
             else:
                 line.append(" ")
         rows.append("".join(line) + reset)
-    return "\\n".join(rows)
+    return "\n".join(rows)
 
 
 def crypto_plus_text(ansi_enabled: bool) -> str:

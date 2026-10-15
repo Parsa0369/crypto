@@ -213,9 +213,32 @@ if ($installedHash -ne $requirementsHash) {
             Invoke-QuietProcess -File $venvPython -Arguments $diagnosticArgs -Message "Detailed dependency retry (Liara)" -LogPath $diagnosticLog -MaxAttempts 1 -SuppressFailureOutput
             $installed = $true
         } catch {
-            Write-Host "  Automatic diagnostic retry failed. Last pip messages:" -ForegroundColor Red
+            Write-Host "  Automatic diagnostic retry reported a failure. Last pip messages:" -ForegroundColor Yellow
             if (Test-Path $diagnosticLog) { Get-Content $diagnosticLog -Tail 25 | Write-Host }
             if (Test-Path $diagnosticErr) { Get-Content $diagnosticErr -Tail 25 | Write-Host }
+
+            # Start-Process can report a misleading failure on some Windows/PowerShell setups.
+            # If the direct dependencies are already installed and pip reports no broken
+            # dependencies, don't block panel startup just because the retry exit code failed.
+            try {
+                & $venvPython -m pip check
+                $pipCheckExit = $LASTEXITCODE
+                if ($pipCheckExit -eq 0) {
+                    $requiredPackages = @("Flask", "requests", "art", "basicfetch")
+                    $packagesPresent = $true
+                    foreach ($packageName in $requiredPackages) {
+                        & $venvPython -m pip show $packageName *> $null
+                        if ($LASTEXITCODE -ne 0) {
+                            $packagesPresent = $false
+                            break
+                        }
+                    }
+                    if ($packagesPresent) {
+                        Write-Host "  Dependencies are already installed and pip check passed; continuing." -ForegroundColor Green
+                        $installed = $true
+                    }
+                }
+            } catch { }
         }
     }
 

@@ -139,6 +139,33 @@ def create_app(password: str | None = None) -> Flask:
             app.logger.exception("Unexpected analysis failure")
             return jsonify({"error": "Unexpected server error. Check local logs."}), 500
 
+    @app.post("/api/behind-scenes/analyze")
+    @login_required
+    def behind_scenes_analyze():
+        body = request.get_json(silent=True) or {}
+        symbol = str(body.get("symbol", "BTCUSDT")).upper().strip()
+        try:
+            target = float(body.get("target_pct", 5))
+            if not 1 <= target <= 100:
+                raise ValueError("درصد هدف باید بین ۱ تا ۱۰۰ باشد.")
+            candles = fetch_hourly_klines(symbol)
+            result = analyze(candles, 3, target)
+            result["symbol"] = symbol
+            result["source"] = candles[-1].get("source", "Unknown")
+            result["last_candle_time_ms"] = candles[-1].get("open_time")
+            result["chart_candles"] = [
+                {"time": int(c.get("open_time", 0)), "open": float(c["open"]),
+                 "high": float(c["high"]), "low": float(c["low"]), "close": float(c["close"])}
+                for c in candles[-72:]
+            ]
+            result["source_checks"] = ["Binance", "Bybit", "Kraken", "Yahoo Finance", "GitHub Actions snapshot"]
+            return jsonify(result)
+        except (ValueError, MarketDataError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception:
+            app.logger.exception("Unexpected behind-scenes analysis failure")
+            return jsonify({"error": "خطای داخلی در پشت صحنه؛ گزارش محلی را بررسی کن."}), 500
+
     @app.post("/api/backtest")
     @login_required
     def backtest_market():

@@ -12,3 +12,5 @@
 .signal-reasons .reason-positive{color:var(--green);border:1px solid #55dfb022}
 .signal-reasons .reason-negative{color:#ffb0ba;border:1px solid #ff7e9122}
 @media(max-width:560px){.signal-reasons{grid-template-columns:1fr}}
+
+.forecast-card{border-color:#8b9cff55;background:linear-gradient(145deg,#1a2540,#111a2b)}.forecast-card strong{color:var(--accent)!important}.forecast-card small{display:block;line-height:1.8;margin-top:6px}

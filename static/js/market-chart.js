@@ -2,6 +2,13 @@
   const $ = id => document.getElementById(id);
   const form = $("chart-form"), button = $("chart-load"), status = $("chart-status");
   const symbolInput = $("chart-symbol");
+  function updateTradingViewChart(symbol, interval){
+    const map = {"1h":"60","4h":"240","1d":"D"};
+    const frame = $("tv-advanced-chart");
+    if (!frame) return;
+    const pair = encodeURIComponent("BINANCE:"+symbol);
+    frame.src = "https://www.tradingview.com/widgetembed/?frameElementId=tv-advanced-chart&symbol="+pair+"&interval="+(map[interval]||"60")+"&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=0b1220&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&hideideas=1&locale=en";
+  }
   function loadTradingViewMarket(){
     const container = $("tv-market-container");
     if (!container || container.dataset.loaded) return;
@@ -40,7 +47,7 @@
     const symbol=$("chart-symbol").value.trim().toUpperCase().replace(/[\s/_-]/g,""), interval=$("chart-interval").value;
     if(!/^[A-Z0-9]{5,20}$/.test(symbol)||!symbol.endsWith("USDT")){setStatus("نماد معتبر USDT وارد کن؛ مثلاً BTCUSDT.",true);return;}
     if(!priceChart&&!initCharts())return;
-    button.disabled=true;setStatus("در حال دریافت داده‌های تاریخی…");
+    button.disabled=true;updateTradingViewChart(symbol, interval);setStatus("در حال دریافت داده‌های نمودار…");
     try{
       const response=await fetch("/api/chart-data?symbol="+encodeURIComponent(symbol)+"&interval="+encodeURIComponent(interval),{cache:"no-store"});
       const data=await response.json();if(!response.ok)throw new Error(data.error||"دادهٔ نمودار دریافت نشد.");

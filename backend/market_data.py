@@ -191,3 +191,29 @@ def get_runner_status() -> dict:
         return {"generated_at": None, "runner_started_at": None,
                 "runner_shutdown_at": None, "refresh_interval_seconds": 900,
                 "has_data": False, "unavailable": True}
+
+
+def get_supported_symbols() -> list[dict]:
+    """Return the currently trading Binance spot USDT pairs for the search box."""
+    url = "https://api.binance.com/api/v3/exchangeInfo"
+    try:
+        response = requests.get(url, timeout=TIMEOUT_SECONDS,
+                                headers={"User-Agent": "CryptoPulse/0.3"})
+        response.raise_for_status()
+        payload = response.json()
+        symbols = []
+        for item in payload.get("symbols", []):
+            if (item.get("status") == "TRADING"
+                    and item.get("quoteAsset") == "USDT"
+                    and item.get("isSpotTradingAllowed", True)):
+                symbol = item.get("symbol", "")
+                if symbol and symbol.isalnum():
+                    symbols.append({"symbol": symbol, "base": item.get("baseAsset", "")})
+        if symbols:
+            return sorted(symbols, key=lambda item: item["symbol"])
+    except (requests.RequestException, ValueError, TypeError):
+        pass
+    # Keep the dashboard usable if exchangeInfo is temporarily unreachable.
+    return [{"symbol": symbol, "base": symbol[:-4]} for symbol in
+            ("BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
+             "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "LTCUSDT")]

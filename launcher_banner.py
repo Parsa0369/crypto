@@ -225,7 +225,7 @@ def main() -> None:
         print(f"{green}{bold}  READY{reset}")
         print()
         print(crypto_plus_logo(ansi_enabled))
-        print(f"{green}{bold}          MICROSOFT WINDOWS{reset}")
+        print(f"{green}{bold}          CRYPTOPLUS // SYSTEM ONLINE{reset}")
         print()
     finally:
         if show_cursor:

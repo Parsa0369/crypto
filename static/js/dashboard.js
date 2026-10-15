@@ -77,7 +77,30 @@ function clearPreviousAnalysis() {
 }
 $("symbol").addEventListener("input", clearPreviousAnalysis);
 $("symbol").addEventListener("change", clearPreviousAnalysis);
+
 $("symbol").addEventListener("search", clearPreviousAnalysis);
+
+// Populate the search suggestions from the live exchange symbol catalogue.
+async function loadSupportedSymbols() {
+  const list = $("symbol-options");
+  try {
+    const response = await fetch("/api/symbols", {cache: "no-store"});
+    if (!response.ok) throw new Error("Symbol list unavailable");
+    const payload = await response.json();
+    const symbols = Array.isArray(payload.symbols) ? payload.symbols : [];
+    if (!symbols.length) return;
+    list.replaceChildren();
+    for (const item of symbols) {
+      const option = document.createElement("option");
+      option.value = item.symbol;
+      option.label = item.base ? item.base + " / USDT" : item.symbol;
+      list.appendChild(option);
+    }
+  } catch (_) {
+    // Keep the small built-in list available if the market API is down.
+  }
+}
+loadSupportedSymbols();
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
   return Number(value).toLocaleString("en-US", {maximumFractionDigits: digits, minimumFractionDigits: 0});

@@ -38,7 +38,7 @@ cd crypto
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\start.ps1
 ```
-The script creates a local virtual environment, installs dependencies, and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically.
+The script creates a local virtual environment, quietly installs dependencies with an animated terminal loader, and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically. The launcher also registers an `open` command in your PowerShell profile; after running the launcher once, open a new PowerShell terminal and type `open` to pull the latest GitHub changes and start CryptoPulse.
 
 ## Manual start
 ```powershell

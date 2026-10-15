@@ -80,6 +80,8 @@ def create_app(password: str | None = None) -> Flask:
             candles = fetch_hourly_klines(symbol)
             result = analyze(candles, horizon, target)
             result["symbol"] = symbol
+            result["source"] = candles[-1].get("source", "Unknown")
+            result["currency"] = candles[-1].get("currency", "USDT")
             result["last_candle_time_ms"] = candles[-1]["open_time"]
             return jsonify(result)
         except (ValueError, MarketDataError) as exc:

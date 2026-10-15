@@ -26,9 +26,9 @@ form.addEventListener("submit", async (event) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "تحلیل انجام نشد.");
     const indicators = data.indicators || {};
-    $("price").textContent = fmt(data.price, 6) + " USDT";
+    $("price").textContent = fmt(data.price, 6) + " " + (data.currency || "USDT");
     $("asset-label").textContent = data.symbol + " · آخرین کندل ساعتی";
-    $("source-label").textContent = "منبع: اولین سرویس در دسترس";
+    $("source-label").textContent = "منبع داده: " + (data.source || "سرویس در دسترس");
     $("up-prob").textContent = pct(data.probability_up);
     $("target-prob").textContent = pct(data.probability_target_hit);
     $("down-prob").textContent = pct(data.probability_negative_return);

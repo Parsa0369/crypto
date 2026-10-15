@@ -17,3 +17,11 @@
 }
 .deep-controls input[type=range] { accent-color: #a5b1ff; }
 .frequency-track, .progress-track { background: #354663; }
+
+
+/* A CSS crystal and dimensional result cards for deep analysis. */
+.deep-controls{position:relative;overflow:hidden}
+.deep-controls:after{content:"";position:absolute;left:22px;top:22px;width:48px;height:48px;background:linear-gradient(135deg,#d6fcff 0,#70dfff 24%,#6d79f5 48%,#26294f 75%);clip-path:polygon(50% 0,100% 25%,82% 82%,50% 100%,12% 78%,0 25%);filter:drop-shadow(7px 9px 0 #0005) drop-shadow(0 0 14px #69dfff33);opacity:.8;pointer-events:none}
+.deep-result-card{transform-style:preserve-3d}
+.deep-result-card:hover{transform:perspective(900px) translateY(-4px) rotateY(-1deg);box-shadow:0 18px 30px #0005,0 0 20px #8b9cff14}
+.deep-frequency{text-shadow:0 0 16px #55dfb033}

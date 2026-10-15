@@ -106,6 +106,61 @@ def windows_logo_3d(ansi_enabled: bool) -> str:
     return "\n".join(rows)
 
 
+
+def crypto_plus_text(ansi_enabled: bool) -> str:
+    """Render CRYPTO PLUS as a separate blue-gradient bitmap wordmark."""
+    font = {
+        "C": [".####", "#....", "#....", "#....", ".####"],
+        "R": ["####.", "#...#", "####.", "#..#.", "#...#"],
+        "Y": ["#...#", ".#.#.", "..#..", "..#..", "..#.."],
+        "P": ["####.", "#...#", "####.", "#....", "#...."],
+        "T": ["#####", "..#..", "..#..", "..#..", "..#.."],
+        "O": [".###.", "#...#", "#...#", "#...#", ".###."],
+        "L": ["#....", "#....", "#....", "#....", "#####"],
+        "U": ["#...#", "#...#", "#...#", "#...#", ".###."],
+        "S": [".####", "#....", ".###.", "....#", "####."],
+    }
+    sx, gap = 2, 1
+    dx, dy = 2, 1
+    ramp = (159, 153, 117, 111, 81)
+    edge_color, depth_color = 231, 24
+    reset = RESET if ansi_enabled else ""
+
+    def bitmap(word: str) -> tuple[set[tuple[int, int]], int]:
+        points: set[tuple[int, int]] = set()
+        cursor_x = 0
+        for char in word:
+            for y, row in enumerate(font[char]):
+                for x, bit in enumerate(row):
+                    if bit == "#":
+                        for k in range(sx):
+                            points.add((cursor_x + x * sx + k, y))
+            cursor_x += (5 + gap) * sx
+        return points, cursor_x - gap * sx
+
+    def render_word(word: str, width: int = 72) -> list[str]:
+        points, word_width = bitmap(word)
+        pad = max(0, (width - word_width - dx) // 2)
+        rows = []
+        for y in range(5 + dy):
+            line = []
+            for x in range(word_width + dx):
+                if (x, y) in points:
+                    if ansi_enabled:
+                        color = edge_color if (x, y - 1) not in points else ramp[min(y, len(ramp) - 1)]
+                        line.append(f"\\033[38;5;{color}m█")
+                    else:
+                        line.append("#")
+                elif (x - dx, y - dy) in points:
+                    line.append(f"\\033[38;5;{depth_color}m▒" if ansi_enabled else ":")
+                else:
+                    line.append(" ")
+            rows.append(" " * pad + "".join(line) + reset)
+        return rows
+
+    return "\\n".join(render_word("CRYPTO") + [""] + render_word("PLUS"))
+
+
 def main() -> None:
     interactive = sys.stdout.isatty()
     ansi_enabled = enable_terminal_colors()
@@ -202,6 +257,8 @@ def main() -> None:
         print()
         print(windows_logo_3d(ansi_enabled))
         print(f"{green}{bold}          MICROSOFT WINDOWS{reset}")
+        print()
+        print(crypto_plus_text(ansi_enabled))
         print()
     finally:
         if show_cursor:

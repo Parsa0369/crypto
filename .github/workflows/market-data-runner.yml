@@ -57,7 +57,12 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 git commit -m "Refresh public market snapshot"
                 if ($LASTEXITCODE -eq 0) {
-                  git push
+                  git pull --rebase origin main
+                  if ($LASTEXITCODE -eq 0) {
+                    git push
+                  } else {
+                    Write-Warning "Could not rebase onto the latest main branch; this refresh will be retried next cycle."
+                  }
                 }
               }
             } else {

@@ -108,7 +108,11 @@ if ($Command -eq "open") {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         throw "Git for Windows is required for 'open'. Use 'panel' to start the local copy."
     }
-    Invoke-QuietProcess -File (Get-Command git).Source -Arguments @("pull", "--ff-only") -Message "Syncing GitHub" -LogPath (Join-Path $env:TEMP "cryptopulse-git.log") -MaxAttempts 2
+    try {
+        Invoke-QuietProcess -File (Get-Command git).Source -Arguments @("pull", "--ff-only") -Message "Syncing GitHub" -LogPath (Join-Path $env:TEMP "cryptopulse-git.log") -MaxAttempts 2
+    } catch {
+        Write-Host "  GitHub sync failed; continuing with the local copy." -ForegroundColor Yellow
+    }
 }
 
 $python = Get-Command py -ErrorAction SilentlyContinue

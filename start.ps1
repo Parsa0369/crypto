@@ -26,7 +26,9 @@ function global:open { & '$projectScript' open }
 
 function Invoke-QuietProcess([string]$File, [string[]]$Arguments, [string]$Message, [string]$LogPath) {
     Remove-Item $LogPath -Force -ErrorAction SilentlyContinue
-    $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -NoNewWindow -RedirectStandardOutput $LogPath -RedirectStandardError $LogPath
+    $errorLog = "$LogPath.err"
+    Remove-Item $errorLog -Force -ErrorAction SilentlyContinue
+    $process = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -NoNewWindow -RedirectStandardOutput $LogPath -RedirectStandardError $errorLog
     $frames = @('◜','◠','◝','◞','◡','◟')
     $i = 0
     while (-not $process.HasExited) {
@@ -38,7 +40,8 @@ function Invoke-QuietProcess([string]$File, [string[]]$Arguments, [string]$Messa
     $process.Refresh()
     if ($process.ExitCode -ne 0) {
         Write-Host ""
-        if (Test-Path $LogPath) { Get-Content $LogPath -Tail 18 | Write-Host }
+        if (Test-Path $LogPath) { Get-Content $LogPath -Tail 12 | Write-Host }
+        if (Test-Path $errorLog) { Get-Content $errorLog -Tail 12 | Write-Host }
         throw "$Message failed. Details are shown above."
     }
     Write-Host ("  ✦  {0}   " -f $Message) -ForegroundColor Green

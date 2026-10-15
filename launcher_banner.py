@@ -9,10 +9,6 @@ import shutil
 import sys
 import time
 
-try:
-    from art import text2art
-except ImportError:
-    text2art = None
 
 ESC = "\033["
 RESET = f"{ESC}0m"
@@ -49,24 +45,6 @@ def enable_terminal_colors() -> bool:
         return bool(kernel32.SetConsoleMode(stdout_handle, mode.value | 0x0004))
     except Exception:
         return False
-
-
-def make_logo() -> list[str]:
-    if text2art is not None:
-        for font in ("small", "standard", "slant"):
-            try:
-                result = text2art("CRYPTOPULSE", font=font, chr_ignore=True).rstrip()
-                if result:
-                    return result.splitlines()
-            except Exception:
-                pass
-    return [
-        "  CCCCC  RRRRR  Y   Y  PPPPP  TTTTT  OOOOO  PPPPP  U   U  L      SSSSS  EEEEE",
-        " C       R   R   Y Y   P   P    T    O   O  P   P  U   U  L      S      E",
-        " C       RRRRR    Y    PPPPP    T    O   O  PPPPP  U   U  L      SSSS   EEEE",
-        " C       R  R     Y    P        T    O   O  P      U   U  L      S         E",
-        "  CCCCC  R   R    Y    P        TTTTT OOOOO P       UUU   LLLLL  SSSSS EEEEE",
-    ]
 
 
 def _pane(x: int, y: int) -> float | None:
@@ -196,8 +174,6 @@ def main() -> None:
     show_cursor = SHOW_CURSOR if interactive and ansi_enabled else ""
     clear = CLEAR if interactive and ansi_enabled else ""
 
-    width = min(max(shutil.get_terminal_size((88, 24)).columns - 4, 48), 88)
-    logo_lines = make_logo()
 
     if clear:
         sys.stdout.write(hide_cursor + clear)

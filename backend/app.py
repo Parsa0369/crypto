@@ -5,6 +5,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 from werkzeug.security import check_password_hash, generate_password_hash
 from .analysis import analyze
 from .market_data import MarketDataError, fetch_hourly_klines, get_runner_status, get_supported_symbols
+from .deep_analysis import get_scan_state, start_scan
 
 
 def create_app(password: str | None = None) -> Flask:
@@ -41,6 +42,11 @@ def create_app(password: str | None = None) -> Flask:
             return redirect(url_for("login"))
         return render_template("dashboard.html")
 
+    @app.get("/deep-analysis")
+    @login_required
+    def deep_analysis_page():
+        return render_template("deep_analysis.html")
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         error = None
@@ -74,6 +80,25 @@ def create_app(password: str | None = None) -> Flask:
     @login_required
     def supported_symbols():
         return jsonify({"symbols": get_supported_symbols()})
+
+    @app.post("/api/deep-analysis/start")
+    @login_required
+    def start_deep_analysis():
+        body = request.get_json(silent=True) or {}
+        try:
+            target = float(body.get("target_pct", 5))
+            if not 1 <= target <= 100:
+                raise ValueError("حداقل هدف باید بین ۱ تا ۱۰۰ درصد باشد.")
+        except (TypeError, ValueError):
+            return jsonify({"error": "درصد هدف باید عددی بین ۱ تا ۱۰۰ باشد."}), 400
+        if not start_scan(target):
+            return jsonify({"error": "یک اسکن دیگر در حال اجراست؛ صبر کن تا تمام شود."}), 409
+        return jsonify({"status": "running", "message": "اسکن در پس‌زمینه شروع شد."}), 202
+
+    @app.get("/api/deep-analysis/status")
+    @login_required
+    def deep_analysis_status():
+        return jsonify(get_scan_state())
 
     @app.post("/api/analyze")
     @login_required

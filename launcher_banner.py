@@ -68,6 +68,44 @@ def make_logo() -> list[str]:
     ]
 
 
+def _pane(x: int, y: int) -> float | None:
+    """Return a 0..1 lighting value when a point lies on the front of the Windows mark."""
+    if not (2 <= x <= 21 or 24 <= x <= 43):
+        return None
+    scale = 1 - 0.22 * (x - 2) / 41
+    adjusted_y = 11.5 + (y - 11.5) / scale
+    if not (1 <= adjusted_y < 11 or 12 <= adjusted_y <= 22.5):
+        return None
+    return ((x - 2) / 41) * 0.5 + ((adjusted_y - 1) / 21.5) * 0.5
+
+
+def windows_logo_3d(ansi_enabled: bool) -> str:
+    """Render a perspective Windows logo with a blue light gradient and dark depth."""
+    ramp = (195, 159, 153, 117, 111, 81, 75, 74)
+    depth_color = 24
+    reset = RESET if ansi_enabled else ""
+    rows = []
+    for y in range(27):
+        line = []
+        for x in range(50):
+            light = _pane(x, y)
+            if light is not None:
+                if ansi_enabled:
+                    color = ramp[min(int(light * len(ramp)), len(ramp) - 1)]
+                    line.append(f"\\033[38;5;{color}m█")
+                else:
+                    line.append("#")
+            elif _pane(x - 2, y - 1) is not None:
+                if ansi_enabled:
+                    line.append(f"\\033[38;5;{depth_color}m▒")
+                else:
+                    line.append(":")
+            else:
+                line.append(" ")
+        rows.append("".join(line) + reset)
+    return "\\n".join(rows)
+
+
 def main() -> None:
     interactive = sys.stdout.isatty()
     ansi_enabled = enable_terminal_colors()
@@ -125,6 +163,9 @@ def main() -> None:
                 print(f"  [{bar}] 100%  MODULE {index:02d}/10")
 
         print(f"{green}{bold}  READY{reset}")
+        print()
+        print(windows_logo_3d(ansi_enabled))
+        print(f"{green}{bold}          MICROSOFT WINDOWS{reset}")
         print()
     finally:
         if show_cursor:

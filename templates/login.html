@@ -1,7 +1,99 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ورود | CryptoPulse</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head>
-<body class="auth-page"><main class="auth-card"><div class="brand-mark">₿</div><p class="eyebrow">LOCAL MARKET RESEARCH</p><h1>ورود به CryptoPulse</h1><p class="muted">این پنل فقط روی همین دستگاه در دسترس است.</p>
-{% if error %}<div class="error-box">{{ error }}</div>{% endif %}
-<form method="post"><label for="password">رمز عبور پنل</label><input id="password" name="password" type="password" autocomplete="current-password" required autofocus><button class="primary-button" type="submit">ورود امن <span>←</span></button></form>
-<p class="footnote">رمز عبور به‌صورت هش‌شده در حافظه برنامه نگهداری می‌شود.</p></main></body></html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ورود | CryptoPulse</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+.auth-page{position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 18% 18%,rgba(103,119,255,.19),transparent 34%),radial-gradient(ellipse at 85% 82%,rgba(49,221,205,.10),transparent 32%),var(--bg)}
+.auth-page:before,.auth-page:after{content:"";position:fixed;width:230px;height:230px;border:1px solid #8b9cff20;border-radius:50%;pointer-events:none;z-index:-1}
+.auth-page:before{top:-100px;left:-80px;box-shadow:0 0 0 25px #8b9cff08,0 0 0 55px #8b9cff05}
+.auth-page:after{bottom:-130px;right:-70px;box-shadow:0 0 0 25px #55e7ff08,0 0 0 55px #55e7ff05}
+.login-layout{width:min(100%,850px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(22px,5vw,60px)}
+.robot-side{text-align:center;padding:12px;animation:login-pop .65s ease both}
+.robot-side h2{font-size:clamp(22px,3vw,30px);margin:14px 0 8px}
+.robot-side p{max-width:300px;margin:0 auto;color:var(--muted);font-size:13px;line-height:2}
+.robot-wrap{width:min(100%,270px);margin:0 auto;filter:drop-shadow(0 18px 35px #0005);animation:robot-float 4s ease-in-out infinite}
+.robot-svg{display:block;width:100%;overflow:visible}
+.robot-eye{transition:opacity .18s ease}
+.robot-hand{transform-box:fill-box;transform-origin:center;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.robot-wrap.password-active .robot-hand-left{transform:translate(18px,-42px) rotate(-15deg)}
+.robot-wrap.password-active .robot-hand-right{transform:translate(-18px,-42px) rotate(15deg)}
+.robot-wrap.password-active .robot-eye{opacity:0}
+.robot-wrap.password-active .robot-mouth{d:path("M 113 127 Q 135 145 157 127")}
+.robot-status{display:inline-flex;align-items:center;gap:7px;margin-top:17px;padding:7px 12px;border:1px solid #55dfb02b;background:#55dfb00b;border-radius:99px;color:var(--green);font-size:11px}
+.robot-status i{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
+.auth-card{width:100%;max-width:420px;justify-self:center;position:relative;animation:login-pop .7s .08s ease both}
+.auth-card .brand-mark{display:grid;place-items:center}
+.auth-card .muted{margin-top:2px}
+.auth-card input{direction:rtl}
+.auth-card .primary-button{gap:12px}
+@keyframes robot-float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-9px) rotate(1deg)}}
+@keyframes login-pop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){.login-layout{grid-template-columns:1fr;gap:12px;max-width:430px}.robot-side{padding:0 8px}.robot-wrap{width:150px}.robot-side h2{font-size:21px;margin:3px 0 4px}.robot-side p{font-size:11px}.robot-status{margin-top:9px}.auth-card{padding:27px}.auth-card .brand-mark{margin-bottom:15px}}
+@media(prefers-reduced-motion:reduce){.robot-wrap,.robot-side,.auth-card{animation:none}}
+</style>
+</head>
+<body class="auth-page">
+<main class="login-layout">
+<section class="robot-side" aria-label="دستیار ورود CryptoPulse">
+<div class="robot-wrap" id="login-robot">
+<svg class="robot-svg" viewBox="0 0 270 250" role="img" aria-labelledby="robot-title robot-desc">
+<title id="robot-title">ربات کوچولوی CryptoPulse</title><desc id="robot-desc">یک ربات دوستانه که هنگام وارد کردن رمز، چشم‌هایش را می‌پوشاند.</desc>
+<defs>
+<linearGradient id="botShell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbe4ff"/><stop offset="1" stop-color="#8498f8"/></linearGradient>
+<linearGradient id="botBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8df0e1"/><stop offset="1" stop-color="#4cbaaF"/></linearGradient>
+<linearGradient id="botFace" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17243c"/><stop offset="1" stop-color="#0a1223"/></linearGradient>
+</defs>
+<ellipse cx="135" cy="224" rx="74" ry="12" fill="#000" opacity=".22"/>
+<path d="M135 29V17" stroke="#a9b8ff" stroke-width="6" stroke-linecap="round"/><circle cx="135" cy="12" r="8" fill="#55e7ff"/><circle cx="135" cy="12" r="3" fill="#e8ffff"/>
+<path d="M84 164 Q67 183 77 208 Q84 222 100 211 L111 184" fill="url(#botShell)" stroke="#7187e8" stroke-width="3"/>
+<path d="M186 164 Q203 183 193 208 Q186 222 170 211 L159 184" fill="url(#botShell)" stroke="#7187e8" stroke-width="3"/>
+<rect x="91" y="151" width="88" height="70" rx="25" fill="url(#botBody)" stroke="#3a9d9b" stroke-width="3"/>
+<rect x="113" y="171" width="44" height="28" rx="9" fill="#12344a" opacity=".9"/><circle cx="125" cy="185" r="4" fill="#55e7ff"/><circle cx="145" cy="185" r="4" fill="#a5ffcf"/>
+<path d="M104 151V139H166V151" fill="none" stroke="#7187e8" stroke-width="5" stroke-linecap="round"/>
+<rect x="58" y="44" width="154" height="125" rx="38" fill="url(#botShell)" stroke="#7187e8" stroke-width="3"/>
+<rect x="72" y="58" width="126" height="95" rx="28" fill="url(#botFace)" stroke="#34466d" stroke-width="2"/>
+<circle cx="107" cy="99" r="10" fill="#55e7ff" class="robot-eye"/><circle cx="163" cy="99" r="10" fill="#55e7ff" class="robot-eye"/>
+<circle cx="110" cy="96" r="3" fill="#fff" class="robot-eye"/><circle cx="166" cy="96" r="3" fill="#fff" class="robot-eye"/>
+<path class="robot-mouth" d="M113 124 Q135 139 157 124" fill="none" stroke="#a5ffcf" stroke-width="5" stroke-linecap="round"/>
+<circle cx="77" cy="119" r="5" fill="#ff8da1" opacity=".8"/><circle cx="193" cy="119" r="5" fill="#ff8da1" opacity=".8"/>
+<path d="M59 92H48Q40 92 40 102V112" fill="none" stroke="#a5b5ff" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="119" r="7" fill="#55e7ff"/>
+<path d="M211 92H222Q230 92 230 102V112" fill="none" stroke="#a5b5ff" stroke-width="6" stroke-linecap="round"/><circle cx="230" cy="119" r="7" fill="#55e7ff"/>
+<g class="robot-hand robot-hand-left"><path d="M77 164 Q62 149 74 137 Q84 130 91 143 L101 158" fill="url(#botShell)" stroke="#7187e8" stroke-width="3" stroke-linecap="round"/><circle cx="80" cy="143" r="8" fill="#dbe4ff"/></g>
+<g class="robot-hand robot-hand-right"><path d="M193 164 Q208 149 196 137 Q186 130 179 143 L169 158" fill="url(#botShell)" stroke="#7187e8" stroke-width="3" stroke-linecap="round"/><circle cx="190" cy="143" r="8" fill="#dbe4ff"/></g>
+</svg>
+</div>
+<h2>سلام! من پالس‌ام 🤖</h2>
+<p id="robot-message">نگران نباش، من اینجام تا ورودت به CryptoPulse راحت و امن باشه.</p>
+<div class="robot-status"><i></i><span>آماده‌ام، بزن بریم!</span></div>
+</section>
+<section class="auth-card">
+<div class="brand-mark">₿</div><p class="eyebrow">LOCAL MARKET RESEARCH</p><h1>ورود به CryptoPulse</h1><p class="muted">برای ادامه، رمز عبور پنل را وارد کن.</p>
+{% if error %}<div class="error-box" role="alert">{{ error }}</div>{% endif %}
+<form method="post"><label for="password">رمز عبور پنل</label><input id="password" name="password" type="password" autocomplete="current-password" required autofocus aria-describedby="password-help"><button class="primary-button" type="submit">ورود امن <span>←</span></button></form>
+<p class="footnote" id="password-help">رمز عبور به‌صورت هش‌شده در حافظه برنامه نگهداری می‌شود.</p>
+</section>
+</main>
+<script>
+(() => {
+  const robot = document.getElementById('login-robot');
+  const password = document.getElementById('password');
+  const message = document.getElementById('robot-message');
+  if (!robot || !password || !message) return;
+  const updateRobot = () => {
+    const active = document.activeElement === password || password.value.length > 0;
+    robot.classList.toggle('password-active', active);
+    message.textContent = active
+      ? 'اووه، رمز محرمانه‌ست! من چشمام رو می‌پوشونم 🙈'
+      : 'نگران نباش، من اینجام تا ورودت به CryptoPulse راحت و امن باشه.';
+  };
+  password.addEventListener('focus', updateRobot);
+  password.addEventListener('input', updateRobot);
+  password.addEventListener('blur', updateRobot);
+  updateRobot();
+})();
+</script>
+</body>
+</html>

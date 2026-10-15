@@ -9,7 +9,7 @@ Set-Location $PSScriptRoot
 
 Write-Host ""
 Write-Host "   ____                  __        ____        " -ForegroundColor Cyan
-Write-Host "  / ___|_ __ _   _ _ __  / _|_   _ |  _ \ _   _|e" -ForegroundColor Cyan
+Write-Host "  / ___|_ __ _   _ _ __  / _|_   _ |  _ \ _   _|" -ForegroundColor Cyan
 Write-Host " | |   | '__| | | | '_ \| |_| | | || |_) | | | |" -ForegroundColor Blue
 Write-Host " | |___| |  | |_| | |_) |  _| |_| ||  __/| |_| |" -ForegroundColor Magenta
 Write-Host "  \____|_|   \__, | .__/|_|  \__, ||_|    \__, |" -ForegroundColor Magenta

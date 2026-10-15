@@ -60,7 +60,7 @@ setInterval(refreshRunnerStatus, 60000);
 target.addEventListener("input", () => targetValue.textContent = target.value + "%");
 
 function normalizeSymbol(value) {
-  const compact = String(value || "").toUpperCase().replace(/[\\s/_-]/g, "");
+  const compact = String(value || "").toUpperCase().replace(/\s|[\/_-]/g, "");
   if (!compact) return "";
   return compact.endsWith("USDT") ? compact : compact + "USDT";
 }

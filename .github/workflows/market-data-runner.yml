@@ -59,6 +59,7 @@ jobs:
               if ($LASTEXITCODE -eq 0) {
                 git push --force origin HEAD:market-data-snapshot
               }
+              git clean -fd
               git checkout main
               git branch -D market-data-snapshot-temp
             } else {

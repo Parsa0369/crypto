@@ -164,7 +164,7 @@ def crypto_plus_text(ansi_enabled: bool) -> str:
 
 def print_animated_art(art: str, delay: float = 0.008) -> None:
     """Reveal ANSI-colored logo art gradually without animating escape codes."""
-    ansi_token = re.compile(r"\\033\\[[0-?]*[ -/]*[@-~]")
+    ansi_token = re.compile(r"\033\[[0-?]*[ -/]*[@-~]")
     for line in art.splitlines():
         for part in ansi_token.split(line):
             if not part:
@@ -174,11 +174,11 @@ def print_animated_art(art: str, delay: float = 0.008) -> None:
                 continue
             for char in part:
                 sys.stdout.write(char)
-                if char not in (" ", "\\t"):
+                if char not in (" ", "\t"):
                     sys.stdout.flush()
                     if sys.stdout.isatty():
                         time.sleep(delay)
-        sys.stdout.write("\\n")
+        sys.stdout.write("\n")
         sys.stdout.flush()
 
 

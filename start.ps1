@@ -172,6 +172,19 @@ if (Test-Path "launcher_banner.py") {
     }
 }
 
+# Show the OS/system ASCII logo. Keep launch resilient if BasicFetch has an issue.
+$basicFetchExe = Join-Path $PSScriptRoot ".venv\Scripts\basicfetch.exe"
+if (Test-Path $basicFetchExe) {
+    try {
+        & $basicFetchExe --no-clear
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  BasicFetch logo skipped; continuing launch." -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host "  BasicFetch logo skipped; continuing launch." -ForegroundColor DarkGray
+    }
+}
+
 Write-Host ""
 Write-Host "  ✦ Launching CryptoPulse..." -ForegroundColor Magenta
 & $venvPython run.py

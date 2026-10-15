@@ -75,6 +75,7 @@ function clearPreviousAnalysis() {
   $("technical-score").textContent = "—";
   $("market-regime").textContent = "—";
 }
+$("symbol").addEventListener("input", clearPreviousAnalysis);
 $("symbol").addEventListener("change", clearPreviousAnalysis);
 $("symbol").addEventListener("search", clearPreviousAnalysis);
 function fmt(value, digits = 2) {
@@ -107,6 +108,10 @@ form.addEventListener("submit", async (event) => {
     $("asset-label").textContent = data.symbol + " · آخرین کندل ساعتی";
     $("source-label").textContent = "منبع داده: " + (data.source || "سرویس در دسترس");
     $("up-prob").textContent = pct(data.probability_up);
+    $("up-forecast-summary").textContent =
+      "بر اساس " + fmt(data.sample_count, 0) + " بازهٔ تاریخی، فراوانی بازده مثبت در " +
+      fmt(data.horizon_hours, 0) + " ساعت: " + pct(data.probability_up) +
+      ". این آمار تاریخی است، نه احتمال کالیبره‌شده یا تضمین آینده.";
     $("target-prob").textContent = pct(data.probability_target_hit);
     $("down-prob").textContent = pct(data.probability_negative_return);
     $("technical-bias").textContent = data.technical_bias || "—";

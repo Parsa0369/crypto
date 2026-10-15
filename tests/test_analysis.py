@@ -23,6 +23,12 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn("market_regime", result)
         self.assertIn("historical_return_median_pct", result)
         self.assertIn("signal_reasons", result)
+        self.assertIn("walk_forward_validation", result)
+        wf = result["walk_forward_validation"]
+        self.assertIn(wf["status"], ("ok", "insufficient_data"))
+        if wf["status"] == "ok":
+            self.assertGreaterEqual(wf["test_windows"], 5)
+            self.assertTrue(all("mae_pct_points" in model for model in wf["models"]))
 
     def test_invalid_horizon_rejected(self):
         with self.assertRaises(ValueError):

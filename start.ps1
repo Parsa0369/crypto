@@ -19,20 +19,21 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 } else { Write-Host "[1/3] Virtual environment already exists." }
 
 $venvPython = ".\.venv\Scripts\python.exe"
+$packageIndex = "https://mirrors.aliyun.com/pypi/simple/"
 Write-Host "[2/3] Preparing pip and installing dependencies..."
-Write-Host "Using the official Python Package Index (PyPI); no third-party mirror is configured." -ForegroundColor DarkGray
+Write-Host "Using the Aliyun PyPI mirror: $packageIndex" -ForegroundColor DarkGray
 
 # Upgrade pip when possible, but don't block installation if the current pip is usable.
-& $venvPython -m pip install --upgrade pip --index-url https://pypi.org/simple --retries 2 --timeout 20
+& $venvPython -m pip install --upgrade pip --index-url $packageIndex --retries 5 --timeout 120
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Could not upgrade pip. Continuing with the version already installed."
+    Write-Warning "Could not upgrade pip from the Aliyun mirror. Continuing with the version already installed."
 }
 
-& $venvPython -m pip install -r requirements.txt --index-url https://pypi.org/simple --retries 4 --timeout 30
+& $venvPython -m pip install -r requirements.txt --index-url $packageIndex --retries 5 --timeout 120
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "Dependency installation failed. This is usually a network/proxy/firewall issue, not a China-specific setting in this script." -ForegroundColor Red
-    Write-Host "Check that https://pypi.org and https://files.pythonhosted.org open in your browser, then retry." -ForegroundColor Yellow
+    Write-Host "Dependency installation failed using the Aliyun PyPI mirror." -ForegroundColor Red
+    Write-Host "Check your internet connection and whether https://mirrors.aliyun.com/pypi/simple/ is reachable, then retry." -ForegroundColor Yellow
     Write-Host "If your network requires a proxy, configure the correct proxy for pip; do not disable HTTPS certificate checks." -ForegroundColor Yellow
     throw "Could not install Python dependencies. See the pip error above."
 }

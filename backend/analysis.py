@@ -109,6 +109,64 @@ def _quantile(values: list[float], q: float) -> float | None:
     return round(ordered[lower] * (1 - fraction) + ordered[upper] * fraction, 4)
 
 
+
+def _walk_forward_validation(closes: list[float], horizon_hours: int) -> dict:
+    """Evaluate simple return baselines sequentially without using future labels.
+
+    This is a small educational benchmark, not a trained trading model. Each
+    test prediction uses only candles and fully matured historical outcomes
+    available at that prediction origin.
+    """
+    min_train = max(48, horizon_hours * 4)
+    origins = list(range(min_train, len(closes) - horizon_hours, max(1, horizon_hours)))
+    if len(origins) < 5:
+        return {
+            "status": "insufficient_data",
+            "test_windows": len(origins),
+            "note": "برای ارزیابی مرحله‌ای، تاریخچهٔ بیشتری لازم است.",
+            "models": [],
+        }
+
+    actuals, predictions = [], {"zero_return": [], "historical_mean": [], "momentum": []}
+    for origin in origins:
+        # Only outcomes whose full horizon ended before the current origin are known.
+        train_returns = [
+            (closes[j + horizon_hours] / closes[j] - 1.0) * 100.0
+            for j in range(0, origin - horizon_hours + 1)
+            if closes[j] > 0
+        ]
+        if not train_returns:
+            continue
+        actual = (closes[origin + horizon_hours] / closes[origin] - 1.0) * 100.0
+        recent_start = max(0, origin - horizon_hours)
+        momentum = (closes[origin] / closes[recent_start] - 1.0) * 100.0 if closes[recent_start] else 0.0
+        actuals.append(actual)
+        predictions["zero_return"].append(0.0)
+        predictions["historical_mean"].append(mean(train_returns))
+        predictions["momentum"].append(momentum)
+
+    if len(actuals) < 5:
+        return {"status": "insufficient_data", "test_windows": len(actuals), "models": []}
+
+    models = []
+    for name, preds in predictions.items():
+        errors = [abs(p - a) for p, a in zip(preds, actuals)]
+        direction_hits = sum((p > 0) == (a > 0) for p, a in zip(preds, actuals))
+        models.append({
+            "name": name,
+            "mae_pct_points": round(mean(errors), 4),
+            "directional_accuracy_pct": round(100.0 * direction_hits / len(actuals), 2),
+            "test_windows": len(actuals),
+        })
+    models.sort(key=lambda item: item["mae_pct_points"])
+    return {
+        "status": "ok",
+        "test_windows": len(actuals),
+        "method": "expanding walk-forward; only matured past outcomes used for historical-mean baseline",
+        "models": models,
+        "note": "ارزیابی تاریخی است؛ به‌دلیل هم‌پوشانی افق‌ها و تغییر رژیم بازار، تضمینی برای آینده نیست.",
+    }
+
 def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
     if not 1 <= horizon_hours <= 168:
         raise ValueError("For this MVP, choose a horizon between 1 and 168 hours.")
@@ -143,6 +201,7 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
     target_hits = sum(x["target_hit"] for x in outcomes)
     downside_hits = sum(x["drawdown_hit"] for x in outcomes)
     indicators = _technical_indicators(candles)
+    walk_forward = _walk_forward_validation(closes, horizon_hours)
 
     # Multi-factor score is a transparent heuristic, not a trained or calibrated model.
     score, reasons = 0, []
@@ -203,6 +262,7 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
         "historical_return_median_pct": _quantile(returns, 0.50),
         "historical_return_p90_pct": _quantile(returns, 0.90),
         "indicators": indicators,
+        "walk_forward_validation": walk_forward,
         "technical_bias": technical_bias,
         "technical_score": score,
         "market_regime": regime,

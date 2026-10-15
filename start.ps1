@@ -177,10 +177,48 @@ if ($installedHash -ne $requirementsHash) {
     }
 
     if (-not $installed) {
-        Write-Host "  All China mirrors failed. Check your network connection and retry." -ForegroundColor Red
-        if (Test-Path $logPath) { Get-Content $logPath -Tail 10 | Write-Host }
-        if (Test-Path "$logPath.err") { Get-Content "$logPath.err" -Tail 16 | Write-Host }
-        throw "Could not install Python dependencies from China mirrors."
+        # Automatically diagnose HTTPS access and make one detailed Aliyun attempt.
+        # This avoids asking the user to run separate troubleshooting commands.
+        Write-Host "  China mirrors failed; checking HTTPS and collecting pip diagnostics..." -ForegroundColor Yellow
+
+        foreach ($url in @(
+            "https://mirrors.aliyun.com/pypi/simple/flask/",
+            "https://pypi.tuna.tsinghua.edu.cn/simple/flask/",
+            "https://repo.huaweicloud.com/repository/pypi/flask/"
+        )) {
+            try {
+                $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15
+                Write-Host ("  HTTPS OK ({0}): HTTP {1}" -f ([uri]$url).Host, [int]$response.StatusCode) -ForegroundColor Green
+            } catch {
+                Write-Host ("  HTTPS failed ({0}): {1}" -f ([uri]$url).Host, $_.Exception.Message) -ForegroundColor Yellow
+            }
+        }
+
+        $diagnosticLog = Join-Path $env:TEMP "cryptopulse-pip-diagnostic.log"
+        $diagnosticErr = "$diagnosticLog.err"
+        Remove-Item $diagnosticLog, $diagnosticErr -Force -ErrorAction SilentlyContinue
+        $diagnosticArgs = @(
+            "-m", "pip", "install", "-r", "requirements.txt",
+            "--index-url", "https://mirrors.aliyun.com/pypi/simple/",
+            "--timeout", "20",
+            "--retries", "0",
+            "--disable-pip-version-check",
+            "--no-warn-script-location",
+            "--no-input",
+            "-vv"
+        )
+        try {
+            Invoke-QuietProcess -File $venvPython -Arguments $diagnosticArgs -Message "Detailed dependency retry (Aliyun)" -LogPath $diagnosticLog -MaxAttempts 1 -SuppressFailureOutput
+            $installed = $true
+        } catch {
+            Write-Host "  Automatic diagnostic retry failed. Last pip messages:" -ForegroundColor Red
+            if (Test-Path $diagnosticLog) { Get-Content $diagnosticLog -Tail 25 | Write-Host }
+            if (Test-Path $diagnosticErr) { Get-Content $diagnosticErr -Tail 25 | Write-Host }
+        }
+    }
+
+    if (-not $installed) {
+        throw "Dependency installation failed. The HTTPS and detailed pip errors are shown above."
     }
 
     Set-Content -Path $stampPath -Value $requirementsHash -Encoding ASCII

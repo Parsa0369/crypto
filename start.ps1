@@ -62,7 +62,7 @@ function Invoke-QuietProcess(
     [switch]$SuppressFailureOutput
 ) {
     $errorLog = "$LogPath.err"
-    $frames = @('|','/','-','\\')
+    $frames = @('|','/','-','\')
 
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         Remove-Item $LogPath, $errorLog -Force -ErrorAction SilentlyContinue

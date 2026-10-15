@@ -145,22 +145,40 @@ if ($installedHash -ne $requirementsHash) {
     $logPath = Join-Path $env:TEMP "cryptopulse-install.log"
     $installBaseArgs = @(
         "-m", "pip", "install", "-r", "requirements.txt",
-        "--retries", "2",
-        "--resume-retries", "2",
-        "--timeout", "20",
+        "--retries", "3",
+        "--resume-retries", "3",
+        "--timeout", "60",
         "--disable-pip-version-check",
         "--no-warn-script-location",
         "--no-input",
         "-q"
     )
-    $mirrorArgs = $installBaseArgs + @("--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple")
 
-    try {
-        Invoke-QuietProcess -File $venvPython -Arguments $mirrorArgs -Message "Installing modules (Tsinghua mirror)" -LogPath $logPath -MaxAttempts 1 -SuppressFailureOutput
-    } catch {
-        Write-Host "  ↻  Mirror unavailable; switching to PyPI..." -ForegroundColor Yellow
-        $fallbackArgs = $installBaseArgs + @("--index-url", "https://pypi.org/simple")
-        Invoke-QuietProcess -File $venvPython -Arguments $fallbackArgs -Message "Installing modules (PyPI fallback)" -LogPath $logPath -MaxAttempts 1
+    # Try several China-hosted PyPI mirrors in sequence for networks where one mirror is blocked.
+    $mirrors = @(
+        @{ Name = "Aliyun China mirror"; Url = "https://mirrors.aliyun.com/pypi/simple/" },
+        @{ Name = "Huawei Cloud China mirror"; Url = "https://repo.huaweicloud.com/repository/pypi/simple/" },
+        @{ Name = "Tencent China mirror"; Url = "https://mirrors.cloud.tencent.com/pypi/simple/" },
+        @{ Name = "Tsinghua China mirror"; Url = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
+    )
+
+    $installed = $false
+    foreach ($mirror in $mirrors) {
+        $mirrorArgs = $installBaseArgs + @("--index-url", $mirror.Url)
+        try {
+            Invoke-QuietProcess -File $venvPython -Arguments $mirrorArgs -Message ("Installing modules (" + $mirror.Name + ")") -LogPath $logPath -MaxAttempts 1 -SuppressFailureOutput
+            $installed = $true
+            break
+        } catch {
+            Write-Host ("  Mirror failed: " + $mirror.Name + "; trying next China mirror...") -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $installed) {
+        Write-Host "  All China mirrors failed. Check your network connection and retry." -ForegroundColor Red
+        if (Test-Path $logPath) { Get-Content $logPath -Tail 10 | Write-Host }
+        if (Test-Path "$logPath.err") { Get-Content "$logPath.err" -Tail 16 | Write-Host }
+        throw "Could not install Python dependencies from China mirrors."
     }
 
     Set-Content -Path $stampPath -Value $requirementsHash -Encoding ASCII

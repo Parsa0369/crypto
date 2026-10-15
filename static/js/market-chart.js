@@ -1,6 +1,18 @@
 (() => {
   const $ = id => document.getElementById(id);
   const form = $("chart-form"), button = $("chart-load"), status = $("chart-status");
+  const symbolInput = $("chart-symbol");
+  function loadTradingViewMarket(){
+    const container = $("tv-market-container");
+    if (!container || container.dataset.loaded) return;
+    container.dataset.loaded = "1";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-screener.js";
+    script.async = true;
+    script.textContent = JSON.stringify({width:"100%",height:490,defaultColumn:"overview",screener_type:"crypto_mkt",displayCurrency:"USD",colorTheme:"dark",locale:"en",isTransparent:true});
+    container.appendChild(script);
+  }
+  loadTradingViewMarket();
   let priceChart, volumeChart, candleSeries, ema20Series, ema50Series, volumeSeries, resizeObserver;
   const fmt = (n, d=4) => n == null || !Number.isFinite(Number(n)) ? "—" : Number(n).toLocaleString("en-US",{maximumFractionDigits:d});
   function setStatus(message, error=false){status.textContent=message;status.className=error?"status error":"status";}

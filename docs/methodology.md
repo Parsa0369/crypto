@@ -27,3 +27,15 @@ Target-touch and negative-return events can both happen during the same window; 
 3. Prevent look-ahead and survivorship bias.
 4. Evaluate Brier score, log loss, reliability diagrams, and performance by regime.
 5. Account for transaction costs and test with paper trading before considering any real-money use.
+
+
+## Educational strategy backtesting
+CryptoPulse includes an independently implemented EMA(12/26) crossover example
+to demonstrate how historical strategy evaluation works. It uses completed
+hourly close prices, a configurable estimated fee per side, and reports the
+simulated return, a buy-and-hold comparison, drawdown, and recorded trades.
+It is not the Freqtrade engine and is not a reproduction of its source code.
+The simulation does not place orders, use leverage, or connect to an exchange
+account. Results depend on the available sample and simplified execution
+assumptions; spread, slippage, liquidity and many real-world constraints are
+not fully represented.

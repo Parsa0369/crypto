@@ -58,6 +58,25 @@ refreshRunnerStatus();
 setInterval(refreshRunnerStatus, 60000);
 
 target.addEventListener("input", () => targetValue.textContent = target.value + "%");
+
+function normalizeSymbol(value) {
+  const compact = String(value || "").toUpperCase().replace(/[\\s/_-]/g, "");
+  if (!compact) return "";
+  return compact.endsWith("USDT") ? compact : compact + "USDT";
+}
+function clearPreviousAnalysis() {
+  $("signal-reasons").replaceChildren();
+  $("technical-bias").textContent = "در انتظار تحلیل نماد انتخابی";
+  $("decision-hint").textContent = "برای دیدن شاخص‌های تازه، دکمهٔ شروع تحلیل را بزن.";
+  $("up-prob").textContent = "—";
+  $("up-forecast-summary").textContent = "هنوز برای این نماد تحلیلی اجرا نشده است.";
+  $("target-prob").textContent = "—";
+  $("down-prob").textContent = "—";
+  $("technical-score").textContent = "—";
+  $("market-regime").textContent = "—";
+}
+$("symbol").addEventListener("change", clearPreviousAnalysis);
+$("symbol").addEventListener("search", clearPreviousAnalysis);
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
   return Number(value).toLocaleString("en-US", {maximumFractionDigits: digits, minimumFractionDigits: 0});
@@ -67,6 +86,11 @@ function showError(message) { statusBox.textContent = message; statusBox.classNa
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const amount = Number($("amount").value), unit = $("unit").value;
+  const symbol = normalizeSymbol($("symbol").value);
+  if (!symbol || !/^[A-Z0-9]{5,20}$/.test(symbol) || !symbol.endsWith("USDT")) {
+    return showError("نماد معتبر وارد کن؛ مثلاً BTC یا BTCUSDT.");
+  }
+  $("symbol").value = symbol;
   if (!Number.isInteger(amount) || amount < 1) return showError("مدت باید عدد صحیح مثبت باشد.");
   const horizon = unit === "days" ? amount * 24 : unit === "minutes" ? Math.max(1, Math.ceil(amount / 60)) : amount;
   if (horizon > 168) return showError("در این نسخه، افق زمانی حداکثر ۷ روز است.");
@@ -75,7 +99,7 @@ form.addEventListener("submit", async (event) => {
   statusBox.className = "status";
   statusBox.textContent = "در حال دریافت کندل‌ها از منابع جایگزین و محاسبه اندیکاتورها...";
   try {
-    const response = await fetch("/api/analyze", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({symbol:$("symbol").value,horizon_hours:horizon,target_pct:Number(target.value)})});
+    const response = await fetch("/api/analyze", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({symbol:symbol,horizon_hours:horizon,target_pct:Number(target.value)})});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "تحلیل انجام نشد.");
     const indicators = data.indicators || {};

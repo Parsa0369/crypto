@@ -48,8 +48,9 @@ jobs:
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
-          $deadline = [DateTime]::UtcNow.AddMinutes(340)
+          $deadline = [DateTime]::Parse($env:RUNNER_SHUTDOWN_AT).ToUniversalTime()
           while ([DateTime]::UtcNow -lt $deadline) {
+            git branch -D market-data-snapshot-temp 2>$null
             python scripts/update_market_snapshot.py
             if ($LASTEXITCODE -eq 0) {
               git checkout --orphan market-data-snapshot-temp

@@ -35,10 +35,12 @@ The embedded TradingView widget requires access to TradingView domains and only 
 ```powershell
 git clone https://github.com/Parsa0369/crypto.git
 cd crypto
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\start.ps1
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+.\start.ps1 panel
 ```
-The script creates a local virtual environment, quietly installs dependencies with an animated terminal loader, and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically. The launcher also registers an `open` command in your PowerShell profile; after running the launcher once, open a new PowerShell terminal and type `open` to pull the latest GitHub changes and start CryptoPulse.
+If PowerShell asks for confirmation, type `Y`. The launcher creates a local virtual environment, uses the Tsinghua University PyPI mirror first with a PyPI fallback, and installs dependencies only when `requirements.txt` changes. It then shows a short animated ASCII splash built with the Python `art` library and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically.
+
+After the first launch, open a new PowerShell terminal in the project folder and type `panel` to start quickly without syncing GitHub. Type `open` to pull the latest GitHub changes and start CryptoPulse. The launcher registers both commands in your PowerShell profile.
 
 ## Manual start
 ```powershell
@@ -78,6 +80,7 @@ run.py         Local launcher
 wsgi.py        Production WSGI entry point for Render
 render.yaml    Render Blueprint for hosted deployment
 start.ps1      Windows setup and launcher
+launcher_banner.py  Animated art-library terminal splash
 ```
 
 ## Network and privacy
@@ -85,7 +88,8 @@ start.ps1      Windows setup and launcher
 - Public market candles are fetched from Binance's public market-data endpoint.
 - No API secret, wallet seed, or exchange trading credential is requested.
 - Local mode binds only to 127.0.0.1. Render deployment uses Gunicorn and an explicit password/secret environment configuration.
-- Dependency downloads use the configured package index. Do not install packages from untrusted mirrors.
+- The Windows launcher uses the Tsinghua University PyPI mirror for dependency downloads, then falls back to the official PyPI index if the mirror fails.
+- After a successful install, the launcher caches the requirements hash so repeated starts skip pip and are faster.
 
 ## Open-source acknowledgement
 CryptoPulse's independent educational backtesting workflow was inspired by reviewing the public documentation and capabilities of [Freqtrade](https://github.com/freqtrade/freqtrade), a separate project licensed under GNU GPL v3.0. CryptoPulse does not include copied Freqtrade source code or bundle the Freqtrade package. See `THIRD_PARTY_NOTICES.md` for the scope of this acknowledgement.

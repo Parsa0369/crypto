@@ -1,0 +1,10 @@
+{
+  "app_name": "CryptoPulse",
+  "host": "127.0.0.1",
+  "default_symbol": "BTCUSDT",
+  "market_data_provider": "Binance public market-data API",
+  "historical_interval": "1h",
+  "historical_limit": 500,
+  "max_horizon_hours": 168,
+  "disclaimer": "Historical estimates are not guarantees or financial advice."
+}

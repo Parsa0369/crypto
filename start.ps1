@@ -159,7 +159,9 @@ if ($installedHash -ne $requirementsHash) {
         @{ Name = "Aliyun China mirror"; Url = "https://mirrors.aliyun.com/pypi/simple/" },
         @{ Name = "Huawei Cloud China mirror"; Url = "https://repo.huaweicloud.com/repository/pypi/simple/" },
         @{ Name = "Tencent China mirror"; Url = "https://mirrors.cloud.tencent.com/pypi/simple/" },
-        @{ Name = "Tsinghua China mirror"; Url = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
+        @{ Name = "SUSTech China mirror"; Url = "https://mirrors.sustech.edu.cn/pypi/web/simple/" },
+        @{ Name = "Tsinghua China mirror"; Url = "https://pypi.tuna.tsinghua.edu.cn/simple/" },
+        @{ Name = "Tsinghua alternate endpoint"; Url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/" }
     )
 
     $installed = $false

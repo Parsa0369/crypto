@@ -14,21 +14,23 @@ STATE={"status":"idle","progress":0,"total":10,"target_pct":5.0,"results":[],"er
 RUNNING=False
 ENGINE=None
 ENGINE_CHECKED=False
+ENGINE_LOCK=threading.Lock()
 
 def load_engine():
  global ENGINE,ENGINE_CHECKED
- if ENGINE_CHECKED:return ENGINE
- ENGINE_CHECKED=True
- compiler=shutil.which("g++") or shutil.which("clang++")
- if not compiler:return None
- try:
-  out=Path(tempfile.gettempdir())/("cryptopulse_deep_scan"+(".dll" if os.name=="nt" else ".so"))
-  cmd=[compiler,"-O3","-std=c++17","-shared"]+([] if os.name=="nt" else ["-fPIC"])+[str(SOURCE),"-o",str(out)]
-  subprocess.run(cmd,check=True,capture_output=True,timeout=30)
-  lib=ctypes.CDLL(str(out));fn=lib.cryptopulse_target_scan
-  fn.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_size_t,ctypes.c_double,ctypes.POINTER(ctypes.c_int),ctypes.c_size_t,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_int)]
-  fn.restype=ctypes.c_int;ENGINE=fn;return fn
- except (OSError,subprocess.SubprocessError):return None
+ with ENGINE_LOCK:
+  if ENGINE_CHECKED:return ENGINE
+  ENGINE_CHECKED=True
+  compiler=shutil.which("g++") or shutil.which("clang++")
+  if not compiler:return None
+  try:
+   out=Path(tempfile.gettempdir())/("cryptopulse_deep_scan"+(".dll" if os.name=="nt" else ".so"))
+   cmd=[compiler,"-O3","-std=c++17","-shared"]+([] if os.name=="nt" else ["-fPIC"])+[str(SOURCE),"-o",str(out)]
+   subprocess.run(cmd,check=True,capture_output=True,timeout=30)
+   lib=ctypes.CDLL(str(out));fn=lib.cryptopulse_target_scan
+   fn.argtypes=[ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_size_t,ctypes.c_double,ctypes.POINTER(ctypes.c_int),ctypes.c_size_t,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_int)]
+   fn.restype=ctypes.c_int;ENGINE=fn;return fn
+  except (OSError,subprocess.SubprocessError):return None
 
 def frequencies(candles,target):
  n=len(candles);closes=(ctypes.c_double*n)(*(float(c["close"]) for c in candles));highs=(ctypes.c_double*n)(*(float(c["high"]) for c in candles))

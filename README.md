@@ -51,8 +51,8 @@ Adjacent windows overlap and are not independent; historical frequencies must no
 backend/       Market data and analysis
 native/        Optional C++17 indicator library
 templates/     Persian RTL HTML pages
-static/        CSS and JavaScript
-tests/         Unit tests
+static/        CSS and JavaScript, including backtesting UI
+tests/         Unit tests, including backtesting checks
 docs/          Architecture and methodology
 run.py         Local launcher
 start.ps1      Windows setup and launcher

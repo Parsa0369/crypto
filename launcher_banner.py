@@ -178,27 +178,6 @@ def main() -> None:
     if clear:
         sys.stdout.write(hide_cursor + clear)
     try:
-        print(f"{green}{bold}+{'-' * width}+{reset}")
-        print(f"{green}{bold}|{' CRYPTOPULSE // TERMINAL ':^{width}}|{reset}")
-        print(f"{green}{bold}+{'-' * width}+{reset}")
-        print()
-
-        for char in "CRYPTOPULSE":
-            sys.stdout.write(f"{green}{bold}{char}{reset}")
-            sys.stdout.flush()
-            if interactive:
-                time.sleep(0.055)
-        print()
-
-        if interactive:
-            time.sleep(0.2)
-
-        for line in logo_lines:
-            print(f"{green}{bold}  {line}{reset}")
-            sys.stdout.flush()
-            if interactive:
-                time.sleep(0.08)
-
         print()
         # Ten connected stages, with a soft blue gradient; each stage takes 1.5 seconds.
         steps = 10

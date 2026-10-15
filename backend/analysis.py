@@ -200,6 +200,24 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
     down = sum(x < 0 for x in returns)
     target_hits = sum(x["target_hit"] for x in outcomes)
     downside_hits = sum(x["drawdown_hit"] for x in outcomes)
+    # Show the historical frequency across target levels, in 5-point increments.
+    # These are descriptive frequencies, not calibrated future probabilities.
+    target_curve = []
+    for level in range(5, 101, 5):
+        hits = sum(
+            max(highs[i + 1:i + horizon_hours + 1]) >= closes[i] * (1.0 + level / 100.0)
+            for i in range(len(closes) - horizon_hours)
+        )
+        target_curve.append({
+            "target_pct": level,
+            "hit_count": hits,
+            "historical_frequency_pct": _safe_percent(hits, len(outcomes)),
+        })
+    target_curve_at_or_above_half = [
+        item["target_pct"] for item in target_curve
+        if item["historical_frequency_pct"] is not None
+        and item["historical_frequency_pct"] >= 50.0
+    ]
     indicators = _technical_indicators(candles)
     walk_forward = _walk_forward_validation(closes, horizon_hours)
 
@@ -255,6 +273,8 @@ def analyze(candles: list[dict], horizon_hours: int, target_pct: float) -> dict:
         "sample_count": len(outcomes), "probability_up": _safe_percent(up, len(outcomes)),
         "probability_down": _safe_percent(down, len(outcomes)),
         "probability_target_hit": _safe_percent(target_hits, len(outcomes)),
+        "target_frequency_curve": target_curve,
+        "highest_target_with_50pct_historical_frequency": max(target_curve_at_or_above_half) if target_curve_at_or_above_half else None,
         "probability_negative_return": _safe_percent(down, len(outcomes)),
         "probability_downside_target_hit": _safe_percent(downside_hits, len(outcomes)),
         "mean_return_pct": round(mean(returns), 4), "return_volatility_pct": round(pstdev(returns), 4),

@@ -1,4 +1,4 @@
-"""Fetch public hourly crypto candles, trying multiple providers in sequence."""
+"""Fetch public hourly candles directly, then use the GitHub Actions snapshot as a fallback."""
 from __future__ import annotations
 
 import requests
@@ -11,6 +11,7 @@ BINANCE_URLS = (
 )
 KRAKEN_OHLC_URL = "https://api.kraken.com/0/public/OHLC"
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+SNAPSHOT_URL = "https://raw.githubusercontent.com/Parsa0369/crypto/main/data/market_snapshot.json"
 TIMEOUT_SECONDS = 10
 
 
@@ -52,9 +53,8 @@ def _fetch_kraken(session: requests.Session, symbol: str) -> list[dict]:
         try:
             candles.append({
                 "open_time": int(row[0]) * 1000, "open": float(row[1]),
-                "high": float(row[2]), "low": float(row[3]),
-                "close": float(row[4]), "volume": float(row[6]),
-                "source": "Kraken", "currency": quote,
+                "high": float(row[2]), "low": float(row[3]), "close": float(row[4]),
+                "volume": float(row[6]), "source": "Kraken", "currency": quote,
             })
         except (TypeError, ValueError, IndexError):
             continue
@@ -62,16 +62,14 @@ def _fetch_kraken(session: requests.Session, symbol: str) -> list[dict]:
 
 
 def _fetch_yahoo(session: requests.Session, symbol: str, limit: int) -> list[dict]:
-    base = symbol[:-4]
-    ticker = f"{base}-USD"
+    ticker = f"{symbol[:-4]}-USD"
     response = session.get(
         YAHOO_CHART_URL.format(ticker=ticker),
         params={"range": "1y", "interval": "1h", "events": "history"},
         timeout=TIMEOUT_SECONDS,
     )
     response.raise_for_status()
-    payload = response.json()
-    chart = payload.get("chart", {})
+    chart = response.json().get("chart", {})
     if chart.get("error"):
         raise MarketDataError(str(chart["error"])[:180])
     results = chart.get("result") or []
@@ -89,13 +87,43 @@ def _fetch_yahoo(session: requests.Session, symbol: str, limit: int) -> list[dic
                 continue
             candles.append({
                 "open_time": int(stamp) * 1000, "open": float(opens[i]),
-                "high": float(highs[i]), "low": float(lows[i]),
-                "close": float(closes[i]), "volume": float(volumes[i] or 0),
-                "source": "Yahoo Finance", "currency": "USD",
+                "high": float(highs[i]), "low": float(lows[i]), "close": float(closes[i]),
+                "volume": float(volumes[i] or 0), "source": "Yahoo Finance", "currency": "USD",
             })
         except (TypeError, ValueError, IndexError):
             continue
     return candles[-min(limit, 1000):]
+
+
+def _fetch_actions_snapshot(session: requests.Session, symbol: str, limit: int) -> list[dict]:
+    response = session.get(SNAPSHOT_URL, params={"v": "1"}, timeout=TIMEOUT_SECONDS)
+    response.raise_for_status()
+    snapshot = response.json()
+    assets = snapshot.get("assets", {})
+    candles = assets.get(symbol)
+    if not isinstance(candles, list) or len(candles) < 50:
+        raise MarketDataError(f"GitHub Actions snapshot has no usable data for {symbol}.")
+    generated_at = snapshot.get("generated_at")
+    shutdown_at = snapshot.get("runner_shutdown_at")
+    # Mark the snapshot provenance and carry its update/runner timestamps through the API.
+    decorated = []
+    for item in candles:
+        try:
+            candle = {
+                "open_time": int(item["open_time"]), "open": float(item["open"]),
+                "high": float(item["high"]), "low": float(item["low"]),
+                "close": float(item["close"]), "volume": float(item.get("volume", 0)),
+                "source": f"GitHub Actions snapshot ({item.get('source', 'market provider')})",
+                "currency": item.get("currency", "USD"),
+                "snapshot_generated_at": generated_at,
+                "runner_shutdown_at": shutdown_at,
+            }
+            decorated.append(candle)
+        except (KeyError, TypeError, ValueError):
+            continue
+    if len(decorated) < 50:
+        raise MarketDataError(f"GitHub Actions snapshot data for {symbol} is invalid.")
+    return decorated[-limit:]
 
 
 def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
@@ -108,7 +136,7 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
     errors = []
 
     with requests.Session() as session:
-        session.headers.update({"User-Agent": "Mozilla/5.0 CryptoPulse/0.2 market research"})
+        session.headers.update({"User-Agent": "Mozilla/5.0 CryptoPulse/0.3 market research"})
         for url in BINANCE_URLS:
             try:
                 response = session.get(url, params=params, timeout=TIMEOUT_SECONDS)
@@ -117,7 +145,7 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
                 if isinstance(payload, list) and payload:
                     candles = _parse_binance(payload)
                     if len(candles) >= 50:
-                        return candles
+                        return candles[-limit:]
                 elif isinstance(payload, dict):
                     errors.append(f"Binance {url.split('/')[2]}: {str(payload.get('msg', 'no candles'))[:100]}")
             except (requests.RequestException, ValueError) as exc:
@@ -126,6 +154,7 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
         for provider, fetch in (
             ("Kraken", lambda: _fetch_kraken(session, symbol)),
             ("Yahoo Finance", lambda: _fetch_yahoo(session, symbol, limit)),
+            ("GitHub Actions snapshot", lambda: _fetch_actions_snapshot(session, symbol, limit)),
         ):
             try:
                 candles = fetch()
@@ -135,9 +164,9 @@ def fetch_hourly_klines(symbol: str, limit: int = 500) -> list[dict]:
             except (requests.RequestException, ValueError, MarketDataError) as exc:
                 errors.append(f"{provider}: {type(exc).__name__}: {str(exc)[:120]}")
 
-    detail = "; ".join(errors[-6:])
+    detail = "; ".join(errors[-7:])
     raise MarketDataError(
-        "Could not retrieve enough hourly market data from Binance, Kraken, or Yahoo Finance. "
-        "Check your network connection or try again later. "
+        "Could not retrieve enough hourly market data from Binance, Kraken, Yahoo Finance, or the GitHub Actions snapshot. "
+        "The scheduled runner must have completed at least one successful refresh. "
         f"Details: {detail}"
     )

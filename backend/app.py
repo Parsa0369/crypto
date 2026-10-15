@@ -4,7 +4,7 @@ from functools import wraps
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from .analysis import analyze
-from .market_data import MarketDataError, fetch_hourly_klines, get_runner_status
+from .market_data import MarketDataError, fetch_hourly_klines, get_runner_status, get_supported_symbols
 
 
 def create_app(password: str | None = None) -> Flask:
@@ -69,6 +69,11 @@ def create_app(password: str | None = None) -> Flask:
     @login_required
     def runner_status():
         return jsonify(get_runner_status())
+
+    @app.get("/api/symbols")
+    @login_required
+    def supported_symbols():
+        return jsonify({"symbols": get_supported_symbols()})
 
     @app.post("/api/analyze")
     @login_required

@@ -91,6 +91,9 @@ def run_ema_backtest(candles: list[dict], fee_pct: float = 0.1) -> dict:
             "duration_hours": len(closes) - 1 - entry_index,
             "open_at_end": True,
         })
+        peak = max(peak, equity)
+        if peak:
+            max_drawdown = max(max_drawdown, (peak - equity) / peak)
         if equity_curve:
             equity_curve[-1]["equity"] = round(equity * 100.0, 4)
 

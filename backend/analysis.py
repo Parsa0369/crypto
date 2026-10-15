@@ -72,7 +72,7 @@ def _technical_indicators(candles: list[dict]) -> dict:
     bb_percent_b = (closes[-1] - bb_lower) / (bb_upper - bb_lower) if bb_upper > bb_lower else 0.5
     roc24 = (closes[-1] / closes[-25] - 1) * 100 if len(closes) > 24 and closes[-25] else None
     roc72 = (closes[-1] / closes[-73] - 1) * 100 if len(closes) > 72 and closes[-73] else None
-    return {
+    result = {
         "rsi_14": round(_rsi(closes), 2),
         "ema_20": round(ema20[-1], 8),
         "ema_50": round(ema50[-1], 8),
@@ -96,6 +96,59 @@ def _technical_indicators(candles: list[dict]) -> dict:
         "price_vs_ema20_pct": round((closes[-1] / ema20[-1] - 1) * 100, 4) if ema20[-1] else 0.0,
         "price_vs_ema50_pct": round((closes[-1] / ema50[-1] - 1) * 100, 4) if ema50[-1] else 0.0,
     }
+
+    # Optional standard indicator implementation; the built-in calculation remains the fallback.
+    try:
+        import pandas as pd
+        import pandas_ta_classic as ta
+
+        close_s = pd.Series(closes, dtype="float64")
+        high_s = pd.Series(highs, dtype="float64")
+        low_s = pd.Series(lows, dtype="float64")
+
+        def last_valid(series):
+            if series is None:
+                return None
+            values = series.dropna()
+            return float(values.iloc[-1]) if not values.empty else None
+
+        def last_column(frame, prefix):
+            if frame is None:
+                return None
+            matches = [col for col in frame.columns if str(col).upper().startswith(prefix)]
+            return last_valid(frame[matches[0]]) if matches else None
+
+        value = last_valid(ta.rsi(close_s, length=14))
+        if value is not None:
+            result["rsi_14"] = round(value, 2)
+        for period, key in ((20, "ema_20"), (50, "ema_50"), (200, "ema_200")):
+            value = last_valid(ta.ema(close_s, length=period))
+            if value is not None:
+                result[key] = round(value, 8)
+        macd = ta.macd(close_s, fast=12, slow=26, signal=9)
+        for prefix, key in (("MACD_", "macd"), ("MACDS_", "macd_signal"), ("MACDH_", "macd_histogram")):
+            value = last_column(macd, prefix)
+            if value is not None:
+                result[key] = round(value, 8)
+        bands = ta.bbands(close_s, length=20, std=2)
+        for prefix, key in (("BBU_", "bollinger_upper"), ("BBM_", "bollinger_middle"), ("BBL_", "bollinger_lower")):
+            value = last_column(bands, prefix)
+            if value is not None:
+                result[key] = round(value, 8)
+        atr = last_valid(ta.atr(high_s, low_s, close_s, length=14))
+        if atr is not None:
+            result["atr_14"] = round(atr, 8)
+            result["atr_pct"] = round(atr / closes[-1] * 100, 4) if closes[-1] else 0.0
+        upper, middle, lower = result["bollinger_upper"], result["bollinger_middle"], result["bollinger_lower"]
+        result["bollinger_width_pct"] = round((upper - lower) / middle * 100, 4) if middle else 0.0
+        result["bollinger_percent_b"] = round((closes[-1] - lower) / (upper - lower), 4) if upper > lower else 0.5
+        result["price_vs_ema20_pct"] = round((closes[-1] / result["ema_20"] - 1) * 100, 4) if result["ema_20"] else 0.0
+        result["price_vs_ema50_pct"] = round((closes[-1] / result["ema_50"] - 1) * 100, 4) if result["ema_50"] else 0.0
+        result["indicator_library"] = "pandas-ta-classic"
+    except Exception:
+        result["indicator_library"] = "CryptoPulse built-in fallback"
+
+    return result
 
 
 def _quantile(values: list[float], q: float) -> float | None:

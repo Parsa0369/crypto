@@ -75,6 +75,8 @@ static/        CSS and JavaScript, including backtesting UI
 tests/         Unit tests, including backtesting checks
 docs/          Architecture and methodology
 run.py         Local launcher
+wsgi.py        Production WSGI entry point for Render
+render.yaml    Render Blueprint for hosted deployment
 start.ps1      Windows setup and launcher
 ```
 

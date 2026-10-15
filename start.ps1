@@ -62,7 +62,7 @@ function Invoke-QuietProcess(
     [switch]$SuppressFailureOutput
 ) {
     $errorLog = "$LogPath.err"
-    $frames = @('◜','◠','◝','◞','◡','◟')
+    $frames = @('|','/','-','\\')
 
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         Remove-Item $LogPath, $errorLog -Force -ErrorAction SilentlyContinue
@@ -80,12 +80,12 @@ function Invoke-QuietProcess(
 
         $process.Refresh()
         if ($process.ExitCode -eq 0) {
-            Write-Host ("  ✦  {0}   " -f $Message) -ForegroundColor Green
+            Write-Host ("  [OK] {0}   " -f $Message) -ForegroundColor Green
             return
         }
 
         if ($attempt -lt $MaxAttempts) {
-            Write-Host ("  ↻  Retrying {0}..." -f $Message) -ForegroundColor Yellow
+            Write-Host ("  [RETRY] Retrying {0}..." -f $Message) -ForegroundColor Yellow
             Start-Sleep -Seconds ([Math]::Min(2 * $attempt, 4))
         }
     }
@@ -99,8 +99,9 @@ function Invoke-QuietProcess(
 }
 
 Write-Host ""
-Write-Host "  ▄█▀▀█▄  CRYPTOPULSE  ▄█▀▀█▄" -ForegroundColor Cyan
-Write-Host "  ▀▄▄▄▄▀   MARKET LAB   ▀▄▄▄▄▀" -ForegroundColor DarkCyan
+Write-Host "  +------------------------------------------+" -ForegroundColor Green
+Write-Host "  |        CRYPTOPULSE // MARKET LAB         |" -ForegroundColor Green
+Write-Host "  +------------------------------------------+" -ForegroundColor Green
 Write-Host ""
 
 # 'open' is the update-and-launch command. 'panel' skips GitHub sync for a quicker start.
@@ -127,7 +128,7 @@ if ($python) {
 }
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    Write-Host "  ✦ Preparing CryptoPulse..." -ForegroundColor Cyan
+    Write-Host "  [BOOT] Preparing CryptoPulse..." -ForegroundColor Green
     & $pythonCommand @pythonArgs -m venv .venv
     if ($LASTEXITCODE -ne 0) { throw "Could not create Python virtual environment." }
 }
@@ -248,7 +249,7 @@ if ($installedHash -ne $requirementsHash) {
 
     Set-Content -Path $stampPath -Value $requirementsHash -Encoding ASCII
 } else {
-    Write-Host "  ✦ Dependencies already ready" -ForegroundColor Green
+    Write-Host "  [OK] Dependencies already ready" -ForegroundColor Green
 }
 
 # The art-based cyber splash runs after dependencies are ready and adds only a short animation.
@@ -259,26 +260,23 @@ if (Test-Path "launcher_banner.py") {
     }
 }
 
-# Draw a Windows-style logo with native PowerShell colors.
-# Native Write-Host avoids ANSI escape sequences showing as literal text in Windows PowerShell.
-$windowsLogo = @(
-    @{ Left = "        "; Right = "        " },
-    @{ Left = "   ████████"; Right = "████████   " },
-    @{ Left = "  █████████"; Right = "█████████  " },
-    @{ Left = " ██████████"; Right = "██████████ " },
-    @{ Left = "███████████"; Right = "███████████" },
-    @{ Left = "███████████"; Right = "███████████" },
-    @{ Left = " ██████████"; Right = "██████████ " },
-    @{ Left = "  █████████"; Right = "█████████  " },
-    @{ Left = "   ████████"; Right = "████████   " }
-)
+# Draw a Windows-style four-pane logo with ASCII only.
+# ASCII avoids encoding corruption in Windows PowerShell 5.1 scripts without a BOM.
 Write-Host ""
-foreach ($logoLine in $windowsLogo) {
-    Write-Host $logoLine.Left -NoNewline -ForegroundColor Blue
-    Write-Host $logoLine.Right -ForegroundColor Cyan
+$windowsLogo = @(
+    "       +-----------+-----------+",
+    "       |           |           |",
+    "       |           |           |",
+    "       +-----------+-----------+",
+    "       |           |           |",
+    "       |           |           |",
+    "       +-----------+-----------+"
+)
+foreach ($line in $windowsLogo) {
+    Write-Host $line -ForegroundColor Green
 }
-Write-Host "             WINDOWS" -ForegroundColor Cyan
+Write-Host "              WINDOWS" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "  ✦ Launching CryptoPulse..." -ForegroundColor Magenta
+Write-Host "  [START] Launching CryptoPulse..." -ForegroundColor Green
 & $venvPython run.py

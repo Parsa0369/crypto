@@ -1,8 +1,32 @@
+param(
+    [Parameter(Position = 0)]
+    [ValidateSet("open")]
+    [string]$Command
+)
+
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
+
 Write-Host ""
-Write-Host " CryptoPulse - Windows setup" -ForegroundColor Cyan
-Write-Host " ---------------------------" -ForegroundColor DarkCyan
+Write-Host "   ____                  __        ____        " -ForegroundColor Cyan
+Write-Host "  / ___|_ __ _   _ _ __  / _|_   _ |  _ \ _   _|e" -ForegroundColor Cyan
+Write-Host " | |   | '__| | | | '_ \| |_| | | || |_) | | | |" -ForegroundColor Blue
+Write-Host " | |___| |  | |_| | |_) |  _| |_| ||  __/| |_| |" -ForegroundColor Magenta
+Write-Host "  \____|_|   \__, | .__/|_|  \__, ||_|    \__, |" -ForegroundColor Magenta
+Write-Host "            |___/|_|          |___/        |___/" -ForegroundColor Cyan
+Write-Host "              CRYPTOPULSE  //  MARKET LAB" -ForegroundColor DarkCyan
+Write-Host ""
+
+if ($Command -eq "open") {
+    Write-Host "[OPEN] Syncing the latest project from GitHub..." -ForegroundColor Cyan
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        throw "Git was not found. Install Git for Windows, then retry."
+    }
+    git pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        throw "git pull failed. Resolve local changes or branch conflicts, then run .\start.ps1 open again."
+    }
+}
 
 $python = Get-Command py -ErrorAction SilentlyContinue
 if ($python) { $pythonCommand = "py"; $pythonArgs = @("-3") }

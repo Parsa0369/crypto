@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ورود | CryptoPulse</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head>
+<body class="auth-page"><main class="auth-card"><div class="brand-mark">₿</div><p class="eyebrow">LOCAL MARKET RESEARCH</p><h1>ورود به CryptoPulse</h1><p class="muted">این پنل فقط روی همین دستگاه در دسترس است.</p>
+{% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+<form method="post"><label for="password">رمز عبور پنل</label><input id="password" name="password" type="password" autocomplete="current-password" required autofocus><button class="primary-button" type="submit">ورود امن <span>←</span></button></form>
+<p class="footnote">رمز عبور به‌صورت هش‌شده در حافظه برنامه نگهداری می‌شود.</p></main></body></html>

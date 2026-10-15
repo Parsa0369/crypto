@@ -74,6 +74,9 @@ function clearPreviousAnalysis() {
   $("down-prob").textContent = "—";
   $("technical-score").textContent = "—";
   $("market-regime").textContent = "—";
+  if ($("target-half-summary")) $("target-half-summary").textContent = "—";
+  if ($("target-half-label")) $("target-half-label").textContent = "پس از تحلیل";
+  if ($("target-curve")) $("target-curve").replaceChildren();
 }
 $("symbol").addEventListener("input", clearPreviousAnalysis);
 $("symbol").addEventListener("change", clearPreviousAnalysis);

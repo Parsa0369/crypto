@@ -137,6 +137,30 @@ form.addEventListener("submit", async (event) => {
       ". این آمار تاریخی است، نه احتمال کالیبره‌شده یا تضمین آینده.";
     $("target-prob").textContent = pct(data.probability_target_hit);
     $("down-prob").textContent = pct(data.probability_negative_return);
+    const targetLevels = data.target_frequency_curve || [];
+    const highestTarget = data.highest_target_with_50pct_historical_frequency;
+    $("target-half-summary").textContent = highestTarget == null ? "هیچ سطحی" : "+" + fmt(highestTarget, 0) + "%";
+    $("target-half-label").textContent = highestTarget == null
+      ? "فراوانی تاریخی به ۵۰٪ نرسید"
+      : "حداقل یک سطح با فراوانی تاریخی ≥ ۵۰٪";
+    const curveBox = $("target-curve");
+    curveBox.replaceChildren();
+    targetLevels.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "target-curve-row";
+      const label = document.createElement("span");
+      label.textContent = "+" + fmt(item.target_pct, 0) + "%";
+      const track = document.createElement("div");
+      track.className = "target-curve-track";
+      const fill = document.createElement("div");
+      fill.className = "target-curve-fill";
+      fill.style.width = Math.max(0, Math.min(100, Number(item.historical_frequency_pct) || 0)) + "%";
+      track.appendChild(fill);
+      const value = document.createElement("strong");
+      value.textContent = pct(item.historical_frequency_pct);
+      row.append(label, track, value);
+      curveBox.appendChild(row);
+    });
     $("technical-bias").textContent = data.technical_bias || "—";
     $("decision-hint").textContent = data.decision_hint || "این برآورد توصیه قطعی خرید یا فروش نیست.";
     $("technical-score").textContent = data.technical_score === undefined ? "—" : fmt(data.technical_score, 0);

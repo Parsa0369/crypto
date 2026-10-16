@@ -39,14 +39,15 @@ window.setTimeout(() => { window.location.replace({{ url_for('index')|tojson }})
 <div class="brand-mark">₿</div>
 <p class="eyebrow">LOCAL MARKET RESEARCH</p>
 <h1>ورود به CryptoPulse</h1>
-<p class="muted">برای ادامه، رمز عبور پنل را وارد کن.</p>
+<p class="muted">{% if setup %}برای شروع، یک رمز عبور حداقل ۱۰ نویسه‌ای بساز.{% else %}برای ادامه، رمز عبور پنل را وارد کن.{% endif %}</p>
 {% if error %}<div class="error-box" role="alert">{{ error }}</div>{% endif %}
 <form method="post" id="login-form">
-<label for="password">رمز عبور پنل</label>
-<input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
-<button class="primary-button" type="submit">ورود امن <span>←</span></button>
+<label for="password">{% if setup %}ساخت رمز عبور{% else %}رمز عبور پنل{% endif %}</label>
+<input id="password" name="password" type="password" autocomplete="{% if setup %}new-password{% else %}current-password{% endif %}" minlength="{% if setup %}10{% else %}1{% endif %}" required autofocus>
+{% if setup %}<label for="confirm_password">تکرار رمز عبور</label><input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="10" required>{% endif %}
+<button class="primary-button" type="submit">{% if setup %}ذخیره و ورود{% else %}ورود امن{% endif %} <span>←</span></button>
 </form>
-<p class="footnote">رمز عبور به‌صورت هش‌شده در حافظه برنامه نگهداری می‌شود.</p>
+<p class="footnote">{% if setup %}رمز فقط به‌صورت هش‌شده روی همین کامپیوتر ذخیره می‌شود.{% else %}رمز عبور به‌صورت هش‌شده نگهداری می‌شود.{% endif %}</p>
 </main>
 {% endif %}
 </body>

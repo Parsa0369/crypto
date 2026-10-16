@@ -1,4 +1,4 @@
-""""Local-only CryptoPulse launcher."""
+"""Local-only CryptoPulse launcher."""
 import socket
 import webbrowser
 from threading import Timer
@@ -48,7 +48,7 @@ def start_github_runner_if_configured() -> None:
 
 
 def main() -> None:
-    print("\\nCryptoPulse | Local market research dashboard")
+    print("\nCryptoPulse | Local market research dashboard")
     # The password is configured as PASS; the user enters it on the website login page.
     password = os.environ.get("PASS", "").strip()
     if len(password) < 10:
@@ -59,12 +59,11 @@ def main() -> None:
     port = find_port()
     app = create_app(password)
     url = f"http://127.0.0.1:{port}"
-    print(f"\\nDashboard: {url}")
-    print("Local-only server. Press Ctrl+C to stop.\\n")
+    print(f"\nDashboard: {url}")
+    print("Local-only server. Press Ctrl+C to stop.\n")
     Timer(1.0, lambda: webbrowser.open(url)).start()
     app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
 
 
 if __name__ == "__main__":
     main()
-"

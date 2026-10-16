@@ -5,7 +5,7 @@
  function reset(){["ai-direction","ai-price","ai-up","ai-up-label","ai-down-label","ai-accuracy","ai-balanced","ai-brier","ai-samples","ai-feature-count"].forEach(id=>$(id).textContent="—");$("ai-models").replaceChildren();$("ai-features").replaceChildren();$("ai-caveats").replaceChildren();}
  form.addEventListener("submit",async e=>{
   e.preventDefault();const symbol=$("ai-symbol").value.trim().toUpperCase().replace(/[\s/_-]/g,""),horizon=Number($("ai-horizon").value),target=Number($("ai-target").value);
-  if(!/^[A-Z0-9]{5,20}USDT$/.test(symbol)){setStatus("نماد معتبر جفت‌ارز USDT وارد کن؛ مثلاً BTCUSDT.",true);return;}
+  if(!/^[A-Z0-9]{1,16}USDT$/.test(symbol)){setStatus("نماد معتبر جفت‌ارز USDT وارد کن؛ مثلاً BTCUSDT.",true);return;}
   if(!(target>=1&&target<=100)){setStatus("هدف باید بین ۱ تا ۱۰۰ درصد باشد.",true);return;}
   button.disabled=true;button.textContent="در حال آموزش مدل‌ها…";reset();setStatus("در حال دریافت تاریخچه و آموزش چهار مدل؛ ممکن است کمی طول بکشد…");
   try{

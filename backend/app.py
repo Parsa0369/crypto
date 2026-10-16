@@ -56,8 +56,9 @@ def create_app(password: str | None = None) -> FastAPI:
     configured_hash = hash_password(password.strip()) if password and password.strip() else None
     def current_hash(): return configured_hash or saved_hash()
     def authenticated(request: Request): return bool(request.session.get("authenticated"))
-    def page(request: Request, name: str, **ctx: Any):
-        return TEMPLATES.TemplateResponse(request=request, name=name, context=ctx)
+    def page(req: Request, name: str, **ctx: Any):
+        ctx.setdefault("request", req)
+        return TEMPLATES.TemplateResponse(request=req, name=name, context=ctx)
     def auth_error(): return JSONResponse({"error": "Authentication required."}, status_code=401)
 
     @app.middleware("http")

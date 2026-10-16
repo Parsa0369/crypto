@@ -53,18 +53,21 @@ RESET = "\033[0m"
 
 SIZE = 56
 SS = 2
-MARGIN = 0.93
+SHADOW = (30, 12, 40)
 SHADOW_OFFSET = 0.07
-SHADOW_COLOR = (38, 38, 38)
 
-RED, GREEN, YELLOW, BLUE = (234, 67, 53), (52, 168, 83), (251, 188, 5), (66, 133, 244)
+PINK = (255, 105, 180)
+HOT = (255, 160, 215)
+DEEP = (70, 20, 110)
+LILAC = (205, 95, 215)
 WHITE = (255, 255, 255)
-SECTORS = ((30, 150, RED), (150, 270, GREEN), (270, 390, YELLOW))
 
-BLUE_R, RING_R = 0.325, 0.415
 _L = (-0.45, -0.55, 0.70)
 _LN = math.sqrt(sum(v * v for v in _L))
 LIGHT = tuple(v / _LN for v in _L)
+
+ECG = ((-0.62, 0.14), (-0.30, 0.14), (-0.18, -0.10), (-0.06, 0.36),
+       (0.06, -0.28), (0.17, 0.14), (0.62, 0.14))
 
 
 def _scale(c, f):
@@ -72,119 +75,107 @@ def _scale(c, f):
 
 
 def _mix(a, b, t):
+    t = max(0.0, min(1.0, t))
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def _analyze(nx, ny):
-    r = math.hypot(nx, ny)
-    if r > 1:
-        return None
-    z = math.sqrt(max(0.0, 1 - r * r))
-    dome = max(0.0, nx * LIGHT[0] + ny * LIGHT[1] + z * LIGHT[2])
-
-    if r < BLUE_R:
-        k = r / BLUE_R
-        zz = math.sqrt(max(0.0, 1 - k * k))
-        d = max(0.0, (nx / BLUE_R) * LIGHT[0] + (ny / BLUE_R) * LIGHT[1] + zz * LIGHT[2])
-        col = _scale(BLUE, 0.72 + 0.40 * d)
-        g = math.hypot(nx + 0.10, ny + 0.12)
-        if g < 0.085:
-            col = _mix(col, WHITE, 0.55 * (1 - g / 0.085))
-        if k > 0.9:
-            col = _scale(col, 1 - 0.25 * (k - 0.9) / 0.1)
-        return ("c", col)
-
-    if r < RING_R:
-        t = (r - BLUE_R) / (RING_R - BLUE_R)
-        col = _scale(WHITE, 0.90 + 0.10 * dome)
-        if t < 0.15:
-            col = _scale(col, 0.82 + 0.18 * t / 0.15)
-        return ("c", col)
-
-    ang = math.degrees(math.atan2(-ny, nx)) % 360
-    f = (0.88 + 0.14 * r) * (0.80 + 0.30 * dome)
-    rim = 0.0
-    if r > 0.93:
-        lit = max(0.0, -(nx * LIGHT[0] + ny * LIGHT[1]) / max(r, 1e-6))
-        rim = 0.30 * lit * (r - 0.93) / 0.07
-    edge = 0.85 if r > 0.985 else 1.0
-    return ("s", ang, r, f, rim, edge)
+def _heart_f(x, y):
+    return (x * x + y * y - 1) ** 3 - x * x * y ** 3
 
 
-def _seg_color(s, rot):
-    _, ang, r, f, rim, edge = s
-    a = (ang - rot) % 360
-    base, delta = RED, 0.0
-    for a0, a1, c in SECTORS:
-        dlt = (a - a0) % 360
-        if dlt < a1 - a0:
-            base, delta = c, dlt
-            break
-    col = _scale(base, f)
-    if delta < 90:
-        dist = r * math.sin(math.radians(delta))
-        if dist < 0.075:
-            col = _scale(col, 1 - 0.32 * (1 - dist / 0.075))
-    if rim:
-        col = _mix(col, WHITE, rim)
-    if edge != 1.0:
-        col = _scale(col, edge)
-    return col
+def _seg_dist(px, py, ax, ay, bx, by):
+    dx, dy = bx - ax, by - ay
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 
 
-def _build():
+def _bow(nx, ny):
+    cx, cy = -0.50, -0.60
+    for sgn in (-1, 1):
+        ex, ey = nx - (cx + sgn * 0.22), ny - (cy - 0.04 * sgn)
+        a = math.radians(-28 * sgn)
+        u, v = ex * math.cos(a) - ey * math.sin(a), ex * math.sin(a) + ey * math.cos(a)
+        d = (u / 0.23) ** 2 + (v / 0.135) ** 2
+        if d < 1:
+            lit = max(0.0, -(ex * LIGHT[0] + ey * LIGHT[1]) / 0.18)
+            col = _mix(PINK, HOT, 0.6 * lit)
+            if d < 0.30:
+                col = _scale(col, 0.78)
+            if d > 0.80:
+                col = _mix(col, WHITE, 0.35)
+            return col
+    k = math.hypot(nx - cx, ny - cy)
+    if k < 0.09:
+        lit = max(0.0, -((nx - cx) * LIGHT[0] + (ny - cy) * LIGHT[1]) / 0.09)
+        return _mix(_scale(PINK, 0.85), WHITE, 0.45 * lit)
+    return None
+
+
+def _heart_color(nx, ny, s):
+    nx, ny = nx / s, ny / s
+    x, y = nx * 1.25, -ny * 1.25 + 0.10
+    f = _heart_f(x, y)
+
+    bow = _bow(nx, ny)
+    if f > 0:
+        return bow
+
+    e = 0.01
+    gx = _heart_f(x + e, y) - _heart_f(x - e, y)
+    gy = _heart_f(x, y + e) - _heart_f(x, y - e)
+    dist = -f * 2 * e / (math.hypot(gx, gy) or 1.0)
+
+    rr = (nx * nx + (ny - 0.02) ** 2) / 0.95
+    z = math.sqrt(max(0.0, 1 - rr))
+    dot = max(0.0, nx * LIGHT[0] * 0.8 + ny * LIGHT[1] * 0.8 + z * LIGHT[2] * 1.15)
+    body = _mix(DEEP, LILAC, min(1.0, dot) ** 1.3)
+
+    if dist < 0.045:
+        body = _mix(PINK, body, dist / 0.045 * 0.55)
+    g = math.hypot(nx + 0.40, ny + 0.20)
+    if g < 0.10:
+        body = _mix(body, WHITE, 0.6 * (1 - g / 0.10))
+
+    ex, ey = nx, ny
+    best = min(_seg_dist(ex, ey, ECG[i][0], ECG[i][1], ECG[i + 1][0], ECG[i + 1][1])
+               for i in range(len(ECG) - 1))
+    if best < 0.04:
+        body = _mix(body, WHITE, 0.95 if best < 0.026 else 0.5)
+        body = _mix(body, HOT, 0.25)
+    return bow if bow is not None else body
+
+
+def _pixel(px, py, s):
     half = SIZE / 2
-    cx = cy = half - 1.2
-    scale = half * MARGIN
+    cx = cy = half - 1.0
+    scale = half * 0.92
+    acc, n, sh = [0, 0, 0], 0, 0
+    for i in range(SS):
+        for j in range(SS):
+            nx = (px + (i + 0.5) / SS - cx) / scale
+            ny = (py + (j + 0.5) / SS - cy) / scale
+            c = _heart_color(nx, ny, s)
+            if c is not None:
+                n += 1
+                acc = [acc[k] + c[k] for k in range(3)]
+            elif SHADOW and _heart_color(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET, s) is not None:
+                sh += 1
     total = SS * SS
-    grid = []
-    for py in range(SIZE):
-        row = []
-        for px in range(SIZE):
-            fixed, nfix, segs, sh = [0, 0, 0], 0, [], 0
-            for i in range(SS):
-                for j in range(SS):
-                    nx = (px + (i + 0.5) / SS - cx) / scale
-                    ny = (py + (j + 0.5) / SS - cy) / scale
-                    a = _analyze(nx, ny)
-                    if a is None:
-                        if _analyze(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET) is not None:
-                            sh += 1
-                    elif a[0] == "c":
-                        nfix += 1
-                        fixed = [fixed[k] + a[1][k] for k in range(3)]
-                    else:
-                        segs.append(a)
-            row.append((fixed, nfix, segs, sh, total))
-        grid.append(row)
-    return grid
-
-
-def _resolve(entry, rot):
-    fixed, nfix, segs, sh, total = entry
-    n, acc = nfix, list(fixed)
-    for s in segs:
-        c = _seg_color(s, rot)
-        acc[0] += c[0]
-        acc[1] += c[1]
-        acc[2] += c[2]
-        n += 1
     if n * 2 >= total:
         return (acc[0] // n, acc[1] // n, acc[2] // n)
-    if sh * 2 >= total and SHADOW_COLOR:
-        return SHADOW_COLOR
+    if sh * 2 >= total:
+        return SHADOW
     return None
 
 
 def _code(rgb, truecolor):
     if truecolor:
         return f"2;{rgb[0]};{rgb[1]};{rgb[2]}"
-    idx = 16 + 36 * round(rgb[0] / 51) + 6 * round(rgb[1] / 51) + round(rgb[2] / 51)
-    return f"5;{idx}"
+    return f"5;{16 + 36 * round(rgb[0] / 51) + 6 * round(rgb[1] / 51) + round(rgb[2] / 51)}"
 
 
-def _frame(grid, rot, truecolor=True):
-    px = [[_resolve(e, rot) for e in row] for row in grid]
+def _frame(s, truecolor=True):
+    px = [[_pixel(x, y, s) for x in range(SIZE)] for y in range(SIZE)]
     rows = []
     for r in range(SIZE // 2):
         line = []
@@ -202,32 +193,22 @@ def _frame(grid, rot, truecolor=True):
     return "\n".join(rows)
 
 
-_GRID = None
-
-
-def _grid():
-    global _GRID
-    if _GRID is None:
-        _GRID = _build()
-    return _GRID
-
-
-def chrome_logo_3d(ansi_enabled: bool = True, truecolor: bool = True, rotation: float = 0.0) -> str:
+def pulse_heart_3d(ansi_enabled: bool = True, truecolor: bool = True, beat: float = 1.0) -> str:
     if not ansi_enabled:
         return _plain()
-    return _frame(_grid(), rotation, truecolor)
+    return _frame(beat, truecolor)
 
 
-def _ease_in_out(t):
-    return 4 * t ** 3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
+def _beat(t):
+    t %= 1.0
+    return math.exp(-((t - 0.10) / 0.055) ** 2) + 0.7 * math.exp(-((t - 0.32) / 0.07) ** 2)
 
 
-def spin_chrome_logo(seconds: float = 3.2, turns: float = 2.0, truecolor: bool = True,
+def beat_pulse_heart(seconds: float = 4.0, strength: float = 0.09, truecolor: bool = True,
                      ansi_enabled: bool = True) -> None:
     if not ansi_enabled or not sys.stdout.isatty():
-        print(chrome_logo_3d(ansi_enabled, truecolor))
+        print(pulse_heart_3d(ansi_enabled, truecolor))
         return
-    grid = _grid()
     height = SIZE // 2
     out = sys.stdout
     out.write("\033[?25l")
@@ -235,14 +216,15 @@ def spin_chrome_logo(seconds: float = 3.2, turns: float = 2.0, truecolor: bool =
         start = time.perf_counter()
         first = True
         while True:
-            t = min(1.0, (time.perf_counter() - start) / seconds)
-            rot = 360.0 * turns * _ease_in_out(t)
+            el = time.perf_counter() - start
+            done = el >= seconds
+            s = 1.0 if done else 1.0 + strength * _beat(el)
             if not first:
                 out.write(f"\033[{height}A")
-            out.write(_frame(grid, rot, truecolor) + "\n")
+            out.write(_frame(s, truecolor) + "\n")
             out.flush()
             first = False
-            if t >= 1.0:
+            if done:
                 break
     finally:
         out.write("\033[?25h")
@@ -255,16 +237,8 @@ def _plain():
     for y in range(H):
         row = []
         for x in range(W):
-            a = _analyze(((x + 0.5) / W * 2 - 1) / MARGIN, ((y + 0.5) / H * 2 - 1) / MARGIN)
-            if a is None:
-                row.append(" ")
-                continue
-            c = a[1] if a[0] == "c" else _seg_color(a, 0.0)
-            if min(c) > 200:
-                row.append(".")
-            else:
-                h = colorsys.rgb_to_hsv(*(v / 255 for v in c))[0] * 360
-                row.append("@" if 180 <= h < 270 else "G" if 70 <= h < 180 else "Y" if 25 <= h < 70 else "R")
+            c = _heart_color(((x + 0.5) / W * 2 - 1) / 0.92, ((y + 0.5) / H * 2 - 1) / 0.92, 1.0)
+            row.append(" " if c is None else ("*" if c[0] > 200 and c[2] > 140 else "#"))
         out.append("".join(row))
     return "\n".join(out)
 
@@ -417,8 +391,8 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        spin_chrome_logo(seconds=3.2, turns=2.0, ansi_enabled=ansi_enabled)
-        print_animated_art(f"{green}{bold}             CHROME{reset}", delay=0.045)
+        beat_pulse_heart(seconds=4.0, strength=0.09, ansi_enabled=ansi_enabled)
+        print_animated_art(f"{green}{bold}          HEARTBEAT{reset}", delay=0.045)
         print()
         print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)
         print()

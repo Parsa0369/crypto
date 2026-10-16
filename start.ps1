@@ -118,6 +118,18 @@ if ($Command -eq "open") {
 
 # Hosted mode: "panel" starts a fresh GitHub Actions dashboard run instead of the local server.
 if ($Command -eq "panel") {
+    # Play the original CryptoPulse art and lightning animation in this terminal first.
+    $bannerPython = Get-Command py -ErrorAction SilentlyContinue
+    if ($bannerPython -and (Test-Path (Join-Path $PSScriptRoot "launcher_banner.py"))) {
+        Write-Host "  [VISUAL] Loading CryptoPulse identity..." -ForegroundColor Cyan
+        & $bannerPython.Source -3 (Join-Path $PSScriptRoot "launcher_banner.py")
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  [WARN] Animation could not finish; continuing startup." -ForegroundColor Yellow
+        }
+    } elseif (Test-Path (Join-Path $PSScriptRoot ".venv\\Scripts\\python.exe")) {
+        & (Join-Path $PSScriptRoot ".venv\\Scripts\\python.exe") (Join-Path $PSScriptRoot "launcher_banner.py")
+    }
+
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
         throw "GitHub CLI (gh) is required for hosted 'panel'. Install it with: winget install --id GitHub.cli"
     }
@@ -155,9 +167,36 @@ if ($Command -eq "panel") {
 
     Write-Host ""
     Write-Host "  [OK] New GitHub Actions run started: $($run.url)" -ForegroundColor Green
-    Write-Host "  Waiting for the temporary Cloudflare link. The run page will open now." -ForegroundColor Yellow
-    Start-Process $run.url
-    Write-Host "  In the run page, open Summary and click 'Dashboard link (temporary)' once it appears." -ForegroundColor Cyan
+    Write-Host "  Waiting for CryptoPulse to come online; the website will open automatically..." -ForegroundColor Yellow
+
+    $publicUrl = $null
+    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+        $logText = gh run view $run.databaseId --repo Parsa0369/crypto --log 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $joinedLog = $logText -join "`n"
+            if ($joinedLog -match 'CryptoPulse dashboard link \(temporary\): (https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
+                $publicUrl = $Matches[1]
+                break
+            }
+        }
+        $frames = @('|','/','-','\\')
+        Write-Host ("  {0} Preparing secure dashboard..." -f $frames[$attempt % $frames.Count]) -NoNewline -ForegroundColor Cyan
+        Start-Sleep -Seconds 5
+        Write-Host "`r" -NoNewline
+    }
+
+    if ($publicUrl) {
+        Write-Host ""
+        Write-Host "  [ONLINE] CryptoPulse is ready!" -ForegroundColor Green
+        Write-Host ("  [WEB] " + $publicUrl) -ForegroundColor Cyan
+        Start-Process $publicUrl
+        Write-Host "  Browser opened automatically. This temporary link works while the workflow is running." -ForegroundColor DarkGray
+    } else {
+        Write-Host ""
+        Write-Host "  [WARN] The dashboard link did not appear within 10 minutes." -ForegroundColor Yellow
+        Write-Host "  Opening the workflow page so you can check its status." -ForegroundColor Cyan
+        Start-Process $run.url
+    }
     exit 0
 }
 

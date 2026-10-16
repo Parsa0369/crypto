@@ -33,6 +33,14 @@ If PowerShell asks for confirmation, type `Y`. The launcher creates a local virt
 
 After the first launch, open a new PowerShell terminal in the project folder and type `panel` to start quickly without syncing GitHub. Type `open` to pull the latest GitHub changes and start CryptoPulse. The launcher registers both commands in your PowerShell profile.
 
+## Hosted dashboard through GitHub Actions (temporary)
+
+1. In GitHub, open **Settings → Secrets and variables → Actions** and add a repository secret named `PASS` with a strong password of at least 10 characters. Do not put the password in source code or workflow files.
+2. Open **Actions → CryptoPulse dashboard → Run workflow** to start the dashboard. Open that run and use the **Dashboard link (temporary)** in its summary.
+3. The **CryptoPulse dashboard watchdog** checks every five minutes and queues a new dashboard run if none is active. GitHub-hosted runners are temporary and can be delayed or limited; this is not guaranteed 24/7 hosting. Each restart creates a new Cloudflare quick-tunnel URL.
+
+**Security note:** The temporary URL is shown in the workflow summary/logs. Anyone who can view those logs may see the login page, so keep the dashboard password private and use a long, unique password.
+
 ## Manual start
 ```powershell
 py -3 -m venv .venv

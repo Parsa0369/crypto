@@ -51,21 +51,22 @@ def enable_terminal_colors() -> bool:
 
 RESET = "\033[0m"
 
-SIZE = 56
-SS = 2
+SIZE = 56           # اندازه‌ی کانوا (پیکسل)؛ هر کاراکتر = ۲ پیکسل عمودی
+SS = 2              # سوپرسمپلینگ برای لبه‌های نرم
 SHADOW = (30, 12, 40)
 SHADOW_OFFSET = 0.07
 
 PINK = (255, 105, 180)
 HOT = (255, 160, 215)
-DEEP = (70, 20, 110)
-LILAC = (205, 95, 215)
+DEEP = (70, 20, 110)        # بنفش تیره‌ی قلب
+LILAC = (205, 95, 215)      # بنفش روشن (سمت نور)
 WHITE = (255, 255, 255)
 
 _L = (-0.45, -0.55, 0.70)
 _LN = math.sqrt(sum(v * v for v in _L))
 LIGHT = tuple(v / _LN for v in _L)
 
+# خط ضربان قلب روی قلب
 ECG = ((-0.62, 0.14), (-0.30, 0.14), (-0.18, -0.10), (-0.06, 0.36),
        (0.06, -0.28), (0.17, 0.14), (0.62, 0.14))
 
@@ -80,6 +81,7 @@ def _mix(a, b, t):
 
 
 def _heart_f(x, y):
+    """تابع ضمنی قلب؛ منفی = داخل قلب."""
     return (x * x + y * y - 1) ** 3 - x * x * y ** 3
 
 
@@ -90,8 +92,9 @@ def _seg_dist(px, py, ax, ay, bx, by):
 
 
 def _bow(nx, ny):
+    """پاپیون صورتی روی لوب بالا-چپ قلب؛ رنگ یا None."""
     cx, cy = -0.50, -0.60
-    for sgn in (-1, 1):
+    for sgn in (-1, 1):                                 # دو حلقه‌ی پاپیون
         ex, ey = nx - (cx + sgn * 0.22), ny - (cy - 0.04 * sgn)
         a = math.radians(-28 * sgn)
         u, v = ex * math.cos(a) - ey * math.sin(a), ex * math.sin(a) + ey * math.cos(a)
@@ -99,12 +102,12 @@ def _bow(nx, ny):
         if d < 1:
             lit = max(0.0, -(ex * LIGHT[0] + ey * LIGHT[1]) / 0.18)
             col = _mix(PINK, HOT, 0.6 * lit)
-            if d < 0.30:
+            if d < 0.30:                                # فرورفتگی داخل حلقه
                 col = _scale(col, 0.78)
-            if d > 0.80:
+            if d > 0.80:                                # لبه‌ی روشن
                 col = _mix(col, WHITE, 0.35)
             return col
-    k = math.hypot(nx - cx, ny - cy)
+    k = math.hypot(nx - cx, ny - cy)                    # گره‌ی وسط
     if k < 0.09:
         lit = max(0.0, -((nx - cx) * LIGHT[0] + (ny - cy) * LIGHT[1]) / 0.09)
         return _mix(_scale(PINK, 0.85), WHITE, 0.45 * lit)
@@ -112,6 +115,7 @@ def _bow(nx, ny):
 
 
 def _heart_color(nx, ny, s):
+    """رنگ لوگو در نقطه‌ی (nx, ny)؛ s = ضریب بزرگ‌نمایی ضربان. بیرون: None."""
     nx, ny = nx / s, ny / s
     x, y = nx * 1.25, -ny * 1.25 + 0.10
     f = _heart_f(x, y)
@@ -123,20 +127,20 @@ def _heart_color(nx, ny, s):
     e = 0.01
     gx = _heart_f(x + e, y) - _heart_f(x - e, y)
     gy = _heart_f(x, y + e) - _heart_f(x, y - e)
-    dist = -f * 2 * e / (math.hypot(gx, gy) or 1.0)
+    dist = -f * 2 * e / (math.hypot(gx, gy) or 1.0)     # فاصله‌ی تخمینی تا لبه
 
-    rr = (nx * nx + (ny - 0.02) ** 2) / 0.95
+    rr = (nx * nx + (ny - 0.02) ** 2) / 0.95            # کره‌ی نرم برای نور
     z = math.sqrt(max(0.0, 1 - rr))
     dot = max(0.0, nx * LIGHT[0] * 0.8 + ny * LIGHT[1] * 0.8 + z * LIGHT[2] * 1.15)
     body = _mix(DEEP, LILAC, min(1.0, dot) ** 1.3)
 
-    if dist < 0.045:
+    if dist < 0.045:                                    # حاشیه‌ی صورتی نئونی
         body = _mix(PINK, body, dist / 0.045 * 0.55)
-    g = math.hypot(nx + 0.40, ny + 0.20)
+    g = math.hypot(nx + 0.40, ny + 0.20)                # لکه‌ی نور روی لوب چپ
     if g < 0.10:
         body = _mix(body, WHITE, 0.6 * (1 - g / 0.10))
 
-    ex, ey = nx, ny
+    ex, ey = nx, ny * 1.0                             # خط ضربان
     best = min(_seg_dist(ex, ey, ECG[i][0], ECG[i][1], ECG[i + 1][0], ECG[i + 1][1])
                for i in range(len(ECG) - 1))
     if best < 0.04:
@@ -194,18 +198,21 @@ def _frame(s, truecolor=True):
 
 
 def pulse_heart_3d(ansi_enabled: bool = True, truecolor: bool = True, beat: float = 1.0) -> str:
+    """قلب سه‌بعدی با پاپیون و خط ضربان. beat = ضریب بزرگ‌نمایی (۱ = حالت عادی)."""
     if not ansi_enabled:
         return _plain()
     return _frame(beat, truecolor)
 
 
 def _beat(t):
+    """الگوی «لاب-داب»: دو ضربه‌ی پشت‌سرهم و بعد استراحت (دوره‌ی ۱ ثانیه)."""
     t %= 1.0
-    return math.exp(-((t - 0.10) / 0.055) ** 2) + 0.7 * math.exp(-((t - 0.32) / 0.07) ** 2)
+    return (math.exp(-((t - 0.10) / 0.055) ** 2) + 0.7 * math.exp(-((t - 0.32) / 0.07) ** 2))
 
 
 def beat_pulse_heart(seconds: float = 4.0, strength: float = 0.09, truecolor: bool = True,
                      ansi_enabled: bool = True) -> None:
+    """انیمیشن ضربان قلب؛ در پایان روی اندازه‌ی عادی می‌ایسته."""
     if not ansi_enabled or not sys.stdout.isatty():
         print(pulse_heart_3d(ansi_enabled, truecolor))
         return

@@ -226,7 +226,7 @@ if ($installedHash -ne $requirementsHash) {
                 & $venvPython -m pip check
                 $pipCheckExit = $LASTEXITCODE
                 if ($pipCheckExit -eq 0) {
-                    $requiredPackages = @("Flask", "requests", "art", "basicfetch")
+                    $requiredPackages = @("fastapi", "uvicorn", "jinja2", "python-multipart", "requests", "art", "basicfetch")
                     $packagesPresent = $true
                     foreach ($packageName in $requiredPackages) {
                         & $venvPython -m pip show $packageName *> $null

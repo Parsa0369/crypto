@@ -323,62 +323,205 @@ def _plain():
         out.append("".join(row))
     return "\n".join(out)
 
-def bolt_logo(ansi_enabled: bool = True, truecolor: bool = True, glow: float = 1.0) -> str:
-    """Render a glowing golden lightning bolt."""
-    rows = []
-    points = ((0.62, 0.04), (0.30, 0.53), (0.49, 0.53), (0.35, 0.96),
-              (0.73, 0.39), (0.54, 0.39))
-    for y in range(32):
-        line = []
-        for x in range(56):
-            px, py = (x + 0.5) / 56, (y + 0.5) / 32
-            inside = False
-            for i in range(len(points)):
-                ax, ay = points[i]
-                bx, by = points[(i + 1) % len(points)]
-                if (ay > py) != (by > py) and px < (bx - ax) * (py - ay) / (by - ay) + ax:
-                    inside = not inside
-            if inside and ansi_enabled:
-                k = max(0.0, min(1.0, py))
-                col = (255, int(247 - 87*k), int(140 - 120*k))
-                line.append(f"\033[38;2;{col[0]};{col[1]};{col[2]}m█")
-            elif inside:
-                line.append("#")
+
+# ---------- Original standalone 3D lightning animation ----------
+_lightning_RESET = "\033[0m"
+
+_lightning_W, _lightning_H = 56, 64             # اندازه‌ی کانوا به پیکسل (هر کاراکتر = ۲ پیکسل عمودی)
+_lightning_SS = 2                    # سوپرسمپلینگ برای لبه‌های نرم
+_lightning_SHADOW = (26, 22, 8)
+_lightning_SHADOW_OFFSET = 0.05
+
+_lightning_BOLT_TOP, _lightning_BOLT_BOT = (255, 247, 140), (255, 160, 20)
+_lightning_HOT = (255, 255, 235)     # هسته‌ی داغ صاعقه
+_lightning_AURA_COLOR = (255, 205, 60)
+_lightning_WHITE = (255, 255, 255)
+
+# شکل صاعقه (مختصات نرمال‌شده؛ y به سمت پایین)
+_lightning_BOLT = ((0.17, -0.92), (-0.41, 0.09), (-0.05, 0.09), (-0.22, 0.92), (0.43, -0.17), (0.07, -0.17))
+_lightning_Y0, _lightning_Y1 = -0.92, 0.92
+
+_lightning_L = (-0.45, -0.55, 0.70)
+_lightning_LN = math.sqrt(sum(v * v for v in _lightning_L))
+_lightning_LIGHT = tuple(v / _lightning_LN for v in _lightning_L)
+
+
+def _lightning_scale(c, f):
+    return tuple(max(0, min(255, int(v * f))) for v in c)
+
+
+def _lightning_mix(a, b, t):
+    t = max(0.0, min(1.0, t))
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _lightning_poly_dist(x, y, ox=0.0, oy=0.0):
+    """فاصله‌ی علامت‌دار تا صاعقه؛ منفی = داخل."""
+    x, y = x - ox, y - oy
+    inside, best = False, 9.0
+    n = len(_lightning_BOLT)
+    for i in range(n):
+        ax, ay = _lightning_BOLT[i]
+        bx, by = _lightning_BOLT[(i + 1) % n]
+        if (ay > y) != (by > y) and x < (bx - ax) * (y - ay) / (by - ay) + ax:
+            inside = not inside
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(x - (ax + t * dx), y - (ay + t * dy)))
+    return -best if inside else best
+
+
+_lightning_GRID = None
+
+
+def _lightning_build():
+    """بخش‌های ثابت (شکل، بیول، سایه) رو یک‌بار پیش‌محاسبه می‌کنه."""
+    scale = _lightning_H / 2 * 0.92
+    cx, cy = _lightning_W / 2, _lightning_H / 2
+    e = 0.01
+    grid = []
+    for py in range(_lightning_H):
+        row = []
+        for px in range(_lightning_W):
+            samples = []
+            for i in range(_lightning_SS):
+                for j in range(_lightning_SS):
+                    nx = (px + (i + 0.5) / _lightning_SS - cx) / scale
+                    ny = (py + (j + 0.5) / _lightning_SS - cy) / scale
+                    bd = _lightning_poly_dist(nx, ny)
+                    if bd < 0:                                   # داخل صاعقه
+                        gx = _lightning_poly_dist(nx + e, ny) - _lightning_poly_dist(nx - e, ny)
+                        gy = _lightning_poly_dist(nx, ny + e) - _lightning_poly_dist(nx, ny - e)
+                        gl = math.hypot(gx, gy) or 1.0
+                        t = min(1.0, -bd / 0.10)                 # عمق بیول
+                        n = (gx / gl * (1 - t), gy / gl * (1 - t), t)
+                        nl = math.sqrt(sum(v * v for v in n)) or 1.0
+                        dot = max(0.0, (n[0] * _lightning_LIGHT[0] + n[1] * _lightning_LIGHT[1] + n[2] * _lightning_LIGHT[2]) / nl)
+                        light = 0.60 + 0.65 * dot
+                        u = nx * 0.7 + ny * 0.7                  # مختصات برای درخشش متحرک
+                        samples.append((True, bd, light, ny, u, False))
+                    else:
+                        sh = _lightning_poly_dist(nx, ny, _lightning_SHADOW_OFFSET, _lightning_SHADOW_OFFSET) < 0
+                        samples.append((False, bd, 0.0, ny, 0.0, sh))
+            row.append(samples)
+        grid.append(row)
+    return grid
+
+
+def _lightning_resolve(samples, glow, shimmer):
+    acc, n, sh = [0, 0, 0], 0, 0
+    aura_r = 0.34 * (0.55 + 0.6 * glow)
+    for inside, bd, light, ny, u, shadow in samples:
+        if inside:
+            col = _lightning_mix(_lightning_BOLT_TOP, _lightning_BOLT_BOT, (ny - _lightning_Y0) / (_lightning_Y1 - _lightning_Y0))
+            col = _lightning_scale(col, light * (0.82 + 0.26 * glow))
+            depth = -bd
+            if depth > 0.11:                                      # هسته‌ی داغ
+                col = _lightning_mix(col, _lightning_HOT, 0.30 * glow)
+            if depth < 0.03:                                      # لبه‌ی روشن
+                col = _lightning_mix(col, _lightning_WHITE, 0.55 * (1 - depth / 0.03) * (0.5 + 0.5 * glow))
+            if shimmer is not None:                               # درخشش عبوری
+                col = _lightning_mix(col, _lightning_WHITE, 0.6 * math.exp(-((u - shimmer) / 0.13) ** 2))
+        else:
+            a = glow * (1 - bd / aura_r) ** 2 * 0.80 if bd < aura_r else 0.0
+            if a > 0.05:                                          # هاله‌ی نور
+                col = _lightning_scale(_lightning_AURA_COLOR, a)
             else:
+                sh += shadow
+                continue
+        acc[0] += col[0]; acc[1] += col[1]; acc[2] += col[2]
+        n += 1
+    total = len(samples)
+    if n * 2 >= total:
+        return (acc[0] // n, acc[1] // n, acc[2] // n)
+    if sh * 2 >= total and _lightning_SHADOW:
+        return _lightning_SHADOW
+    return None
+
+
+def _lightning_code(rgb, truecolor):
+    if truecolor:
+        return f"2;{rgb[0]};{rgb[1]};{rgb[2]}"
+    return f"5;{16 + 36 * round(rgb[0] / 51) + 6 * round(rgb[1] / 51) + round(rgb[2] / 51)}"
+
+
+def _lightning_frame(glow, shimmer=None, truecolor=True):
+    global _lightning_GRID
+    if _lightning_GRID is None:
+        _lightning_GRID = _lightning_build()
+    px = [[_lightning_resolve(s, glow, shimmer) for s in row] for row in _lightning_GRID]
+    rows = []
+    for r in range(_lightning_H // 2):
+        line = []
+        for x in range(_lightning_W):
+            top, bot = px[2 * r][x], px[2 * r + 1][x]
+            if top is None and bot is None:
                 line.append(" ")
-        rows.append("".join(line) + (RESET if ansi_enabled else ""))
+            elif bot is None:
+                line.append(f"\033[38;{_lightning_code(top, truecolor)}m▀")
+            elif top is None:
+                line.append(f"\033[38;{_lightning_code(bot, truecolor)}m▄")
+            else:
+                line.append(f"\033[38;{_lightning_code(top, truecolor)};48;{_lightning_code(bot, truecolor)}m▀\033[49m")
+        rows.append("".join(line) + _lightning_RESET)
     return "\n".join(rows)
 
 
-def bolt_animation(seconds: float = 4.0, truecolor: bool = True,
-                   ansi_enabled: bool = True, clear_after: bool = False) -> None:
-    """Animate the golden lightning bolt with a soft pulsing glow."""
+def bolt_logo(ansi_enabled: bool = True, truecolor: bool = True, glow: float = 1.0) -> str:
+    """یک صاعقه‌ی ⚡ سه‌بعدی (تصویر ثابت)."""
+    if not ansi_enabled:
+        return "\n".join(["      /\\", "     /  /", "    /  /", "   /  /___", "  /      /",
+                          "  ‾‾/  /‾‾", "   /  /", "  / /", " //"])
+    return _lightning_frame(glow, None, truecolor)
+
+
+def _lightning_glow_at(t):
+    """نور صاعقه در زمان t: نفس‌کشیدن آروم + جرقه‌های دوتایی هر ۲.۵ ثانیه."""
+    breath = 0.50 + 0.12 * math.sin(2 * math.pi * t / 1.6)
+    c = t % 2.5
+    flash = max(math.exp(-((c - 0.20) / 0.05) ** 2),
+                0.85 * math.exp(-((c - 0.40) / 0.06) ** 2),
+                0.40 * math.exp(-max(0.0, c - 0.5) / 0.30))
+    flicker = 0.04 * math.sin(41 * t) * math.sin(13 * t)
+    return max(0.0, min(1.2, max(breath, 0.35 + 0.85 * flash) + flicker))
+
+
+def _lightning_shimmer_at(t):
+    """درخششی که هر ۱.۲۵ ثانیه از گوشه‌ی بالا-چپ به پایین-راست روی صاعقه می‌رد شه."""
+    p = (t % 1.25) / 0.55
+    return None if p > 1 else -1.5 + 3.0 * p
+
+
+def bolt_animation(seconds: float = 10.0, truecolor: bool = True, ansi_enabled: bool = True,
+                   clear_after: bool = False) -> None:
+    """فقط یه ⚡ سه‌بعدی و متحرک، دقیقاً `seconds` ثانیه (پیش‌فرض ۱۰).
+    clear_after=True → بعد از اتمام، صاعقه از صفحه پاک می‌شه."""
     if not ansi_enabled or not sys.stdout.isatty():
         print(bolt_logo(ansi_enabled, truecolor))
         return
-    height = 32
+    height = _lightning_H // 2
     out = sys.stdout
-    out.write("\033[?25l")
+    out.write("\033[?25l")                                        # مخفی کردن مکان‌نما
     try:
         start = time.perf_counter()
         first = True
         while True:
-            elapsed = time.perf_counter() - start
-            done = elapsed >= seconds
+            el = time.perf_counter() - start
+            done = el >= seconds
+            g = 1.0 if done else _lightning_glow_at(el)
+            sh = None if done else _lightning_shimmer_at(el)
             if not first:
                 out.write(f"\033[{height}A")
-            out.write(bolt_logo(ansi_enabled, truecolor, 1.0 if done else 0.65 + 0.35 * math.sin(elapsed * 8)) + "\n")
+            out.write(_lightning_frame(g, sh, truecolor) + "\n")
             out.flush()
             first = False
             if done:
                 break
-            time.sleep(0.04)
         if clear_after:
             out.write(f"\033[{height}A\033[J")
     finally:
         out.write("\033[?25h")
         out.flush()
-
 
 def crypto_plus_text(ansi_enabled: bool) -> str:
     """Render CRYPTO PLUS as a separate blue-gradient bitmap wordmark."""

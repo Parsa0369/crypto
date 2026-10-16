@@ -37,6 +37,10 @@ jobs:
             throw "Repository secret PASS is missing or shorter than 10 characters. Add it in Settings > Secrets and variables > Actions."
           }
 
+          # Ensure Python can import repository packages regardless of how the script is launched.
+          $env:PYTHONPATH = $env:GITHUB_WORKSPACE
+          Write-Host "Repository root added to PYTHONPATH: $env:GITHUB_WORKSPACE"
+
           $dashboardOut = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.out.log"
           $dashboardErr = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.err.log"
           $tunnelOut = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.out.log"

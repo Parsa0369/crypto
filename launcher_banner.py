@@ -341,13 +341,13 @@ def bolt_logo(ansi_enabled: bool = True, truecolor: bool = True, glow: float = 1
             if inside and ansi_enabled:
                 k = max(0.0, min(1.0, py))
                 col = (255, int(247 - 87*k), int(140 - 120*k))
-                line.append(f"\\033[38;2;{col[0]};{col[1]};{col[2]}m█")
+                line.append(f"\033[38;2;{col[0]};{col[1]};{col[2]}m█")
             elif inside:
                 line.append("#")
             else:
                 line.append(" ")
         rows.append("".join(line) + (RESET if ansi_enabled else ""))
-    return "\\n".join(rows)
+    return "\n".join(rows)
 
 
 def bolt_animation(seconds: float = 4.0, truecolor: bool = True,
@@ -358,7 +358,7 @@ def bolt_animation(seconds: float = 4.0, truecolor: bool = True,
         return
     height = 32
     out = sys.stdout
-    out.write("\\033[?25l")
+    out.write("\033[?25l")
     try:
         start = time.perf_counter()
         first = True
@@ -366,17 +366,17 @@ def bolt_animation(seconds: float = 4.0, truecolor: bool = True,
             elapsed = time.perf_counter() - start
             done = elapsed >= seconds
             if not first:
-                out.write(f"\\033[{height}A")
-            out.write(bolt_logo(ansi_enabled, truecolor, 1.0 if done else 0.65 + 0.35 * math.sin(elapsed * 8)) + "\\n")
+                out.write(f"\033[{height}A")
+            out.write(bolt_logo(ansi_enabled, truecolor, 1.0 if done else 0.65 + 0.35 * math.sin(elapsed * 8)) + "\n")
             out.flush()
             first = False
             if done:
                 break
             time.sleep(0.04)
         if clear_after:
-            out.write(f"\\033[{height}A\\033[J")
+            out.write(f"\033[{height}A\033[J")
     finally:
-        out.write("\\033[?25h")
+        out.write("\033[?25h")
         out.flush()
 
 

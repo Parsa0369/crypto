@@ -206,7 +206,7 @@ def main() -> None:
         sys.stdout.write(hide_cursor + clear)
     try:
         print()
-        # Ten connected stages, with a soft blue gradient; each stage takes 1.5 seconds.
+        # Ten connected stages, with a soft blue gradient; total duration is 4.3 seconds.
         steps = 10
         cell = 4
         width = steps * cell
@@ -251,14 +251,14 @@ def main() -> None:
                     sys.stdout.write(render_progress(amount) + "\n")
                     sys.stdout.flush()
                     if amount < total:
-                        time.sleep((steps * 1.5) / total)
+                        time.sleep(4.3 / total)
             finally:
                 sys.stdout.write(show_cursor)
                 sys.stdout.flush()
         else:
             print("  [########################################] 100%   STAGE 10/10")
             if interactive:
-                time.sleep(steps * 1.5)
+                time.sleep(4.3)
 
         print(f"{green}{bold}  READY{reset}")
         print()

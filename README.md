@@ -8,7 +8,7 @@
 - Windows PowerShell launcher; local dashboard bound to 127.0.0.1.
 - Dedicated TradingView Advanced Chart widget embedded in the market chart page.
 - GitHub Actions refreshes public market-data snapshots on a schedule.
-- Hidden password prompt and password-hash verification.
+- Website login with password-hash verification; no terminal password prompt.
 - Public hourly OHLCV market data (no API key required for this endpoint).
 - Historical up/down frequencies, target-touch frequency, negative-return frequency, volatility, and RSI(14).
 - Educational EMA(12/26) historical backtest with estimated per-side fees, equity curve, drawdown, and comparison against buy-and-hold; simulation only.
@@ -68,8 +68,6 @@ static/        CSS and JavaScript, including backtesting UI
 tests/         Unit tests, including backtesting checks
 docs/          Architecture and methodology
 run.py         Local launcher
-wsgi.py        Production WSGI entry point for Render
-render.yaml    Render Blueprint for hosted deployment
 start.ps1      Windows setup and launcher
 launcher_banner.py  Animated art-library terminal splash
 ```

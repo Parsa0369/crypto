@@ -52,7 +52,7 @@ def enable_terminal_colors() -> bool:
 RESET = "\033[0m"
 
 SIZE = 56
-SS = 3
+SS = 2
 MARGIN = 0.93
 SHADOW_OFFSET = 0.07
 SHADOW_COLOR = (38, 38, 38)
@@ -62,9 +62,9 @@ WHITE = (255, 255, 255)
 SECTORS = ((30, 150, RED), (150, 270, GREEN), (270, 390, YELLOW))
 
 BLUE_R, RING_R = 0.325, 0.415
-_LIGHT = (-0.45, -0.55, 0.70)
-_LN = math.sqrt(sum(v * v for v in _LIGHT))
-LIGHT = tuple(v / _LN for v in _LIGHT)
+_L = (-0.45, -0.55, 0.70)
+_LN = math.sqrt(sum(v * v for v in _L))
+LIGHT = tuple(v / _LN for v in _L)
 
 
 def _scale(c, f):
@@ -75,8 +75,7 @@ def _mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def _chrome_color(nx, ny):
-    """Return the shaded Chrome-logo color at normalized coordinates."""
+def _analyze(nx, ny):
     r = math.hypot(nx, ny)
     if r > 1:
         return None
@@ -93,55 +92,85 @@ def _chrome_color(nx, ny):
             col = _mix(col, WHITE, 0.55 * (1 - g / 0.085))
         if k > 0.9:
             col = _scale(col, 1 - 0.25 * (k - 0.9) / 0.1)
-        return col
+        return ("c", col)
 
     if r < RING_R:
         t = (r - BLUE_R) / (RING_R - BLUE_R)
         col = _scale(WHITE, 0.90 + 0.10 * dome)
         if t < 0.15:
             col = _scale(col, 0.82 + 0.18 * t / 0.15)
-        return col
+        return ("c", col)
 
     ang = math.degrees(math.atan2(-ny, nx)) % 360
+    f = (0.88 + 0.14 * r) * (0.80 + 0.30 * dome)
+    rim = 0.0
+    if r > 0.93:
+        lit = max(0.0, -(nx * LIGHT[0] + ny * LIGHT[1]) / max(r, 1e-6))
+        rim = 0.30 * lit * (r - 0.93) / 0.07
+    edge = 0.85 if r > 0.985 else 1.0
+    return ("s", ang, r, f, rim, edge)
+
+
+def _seg_color(s, rot):
+    _, ang, r, f, rim, edge = s
+    a = (ang - rot) % 360
     base, delta = RED, 0.0
     for a0, a1, c in SECTORS:
-        dlt = (ang - a0) % 360
+        dlt = (a - a0) % 360
         if dlt < a1 - a0:
             base, delta = c, dlt
             break
-
-    f = (0.88 + 0.14 * r) * (0.80 + 0.30 * dome)
     col = _scale(base, f)
     if delta < 90:
         dist = r * math.sin(math.radians(delta))
         if dist < 0.075:
             col = _scale(col, 1 - 0.32 * (1 - dist / 0.075))
-    if r > 0.93:
-        lit = max(0.0, -(nx * LIGHT[0] + ny * LIGHT[1]) / max(r, 1e-6))
-        col = _mix(col, WHITE, 0.30 * lit * (r - 0.93) / 0.07)
-    if r > 0.985:
-        col = _scale(col, 0.85)
+    if rim:
+        col = _mix(col, WHITE, rim)
+    if edge != 1.0:
+        col = _scale(col, edge)
     return col
 
 
-def _pixel(px, py):
+def _build():
     half = SIZE / 2
     cx = cy = half - 1.2
     scale = half * MARGIN
-    acc, n, sh = [0, 0, 0], 0, 0
-    for i in range(SS):
-        for j in range(SS):
-            nx = (px + (i + 0.5) / SS - cx) / scale
-            ny = (py + (j + 0.5) / SS - cy) / scale
-            c = _chrome_color(nx, ny)
-            if c is not None:
-                n += 1
-                acc = [acc[k] + c[k] for k in range(3)]
-            elif _chrome_color(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET) is not None:
-                sh += 1
     total = SS * SS
+    grid = []
+    for py in range(SIZE):
+        row = []
+        for px in range(SIZE):
+            fixed, nfix, segs, sh = [0, 0, 0], 0, [], 0
+            for i in range(SS):
+                for j in range(SS):
+                    nx = (px + (i + 0.5) / SS - cx) / scale
+                    ny = (py + (j + 0.5) / SS - cy) / scale
+                    a = _analyze(nx, ny)
+                    if a is None:
+                        if _analyze(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET) is not None:
+                            sh += 1
+                    elif a[0] == "c":
+                        nfix += 1
+                        fixed = [fixed[k] + a[1][k] for k in range(3)]
+                    else:
+                        segs.append(a)
+            row.append((fixed, nfix, segs, sh, total))
+        grid.append(row)
+    return grid
+
+
+def _resolve(entry, rot):
+    fixed, nfix, segs, sh, total = entry
+    n, acc = nfix, list(fixed)
+    for s in segs:
+        c = _seg_color(s, rot)
+        acc[0] += c[0]
+        acc[1] += c[1]
+        acc[2] += c[2]
+        n += 1
     if n * 2 >= total:
-        return tuple(a // n for a in acc)
+        return (acc[0] // n, acc[1] // n, acc[2] // n)
     if sh * 2 >= total and SHADOW_COLOR:
         return SHADOW_COLOR
     return None
@@ -154,15 +183,13 @@ def _code(rgb, truecolor):
     return f"5;{idx}"
 
 
-def chrome_logo_3d(ansi_enabled: bool = True, truecolor: bool = True) -> str:
-    """Render a detailed Chrome logo using half-blocks and 24-bit color."""
-    if not ansi_enabled:
-        return _plain()
+def _frame(grid, rot, truecolor=True):
+    px = [[_resolve(e, rot) for e in row] for row in grid]
     rows = []
     for r in range(SIZE // 2):
         line = []
         for x in range(SIZE):
-            top, bot = _pixel(x, 2 * r), _pixel(x, 2 * r + 1)
+            top, bot = px[2 * r][x], px[2 * r + 1][x]
             if top is None and bot is None:
                 line.append(" ")
             elif bot is None:
@@ -175,17 +202,65 @@ def chrome_logo_3d(ansi_enabled: bool = True, truecolor: bool = True) -> str:
     return "\n".join(rows)
 
 
+_GRID = None
+
+
+def _grid():
+    global _GRID
+    if _GRID is None:
+        _GRID = _build()
+    return _GRID
+
+
+def chrome_logo_3d(ansi_enabled: bool = True, truecolor: bool = True, rotation: float = 0.0) -> str:
+    if not ansi_enabled:
+        return _plain()
+    return _frame(_grid(), rotation, truecolor)
+
+
+def _ease_in_out(t):
+    return 4 * t ** 3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
+
+
+def spin_chrome_logo(seconds: float = 3.2, turns: float = 2.0, truecolor: bool = True,
+                     ansi_enabled: bool = True) -> None:
+    if not ansi_enabled or not sys.stdout.isatty():
+        print(chrome_logo_3d(ansi_enabled, truecolor))
+        return
+    grid = _grid()
+    height = SIZE // 2
+    out = sys.stdout
+    out.write("\033[?25l")
+    try:
+        start = time.perf_counter()
+        first = True
+        while True:
+            t = min(1.0, (time.perf_counter() - start) / seconds)
+            rot = 360.0 * turns * _ease_in_out(t)
+            if not first:
+                out.write(f"\033[{height}A")
+            out.write(_frame(grid, rot, truecolor) + "\n")
+            out.flush()
+            first = False
+            if t >= 1.0:
+                break
+    finally:
+        out.write("\033[?25h")
+        out.flush()
+
+
 def _plain():
-    """Render a no-color text fallback for the Chrome logo."""
     W, H = 44, 22
     out = []
     for y in range(H):
         row = []
         for x in range(W):
-            c = _chrome_color(((x + 0.5) / W * 2 - 1) / MARGIN, ((y + 0.5) / H * 2 - 1) / MARGIN)
-            if c is None:
+            a = _analyze(((x + 0.5) / W * 2 - 1) / MARGIN, ((y + 0.5) / H * 2 - 1) / MARGIN)
+            if a is None:
                 row.append(" ")
-            elif min(c) > 200:
+                continue
+            c = a[1] if a[0] == "c" else _seg_color(a, 0.0)
+            if min(c) > 200:
                 row.append(".")
             else:
                 h = colorsys.rgb_to_hsv(*(v / 255 for v in c))[0] * 360
@@ -342,7 +417,7 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        print_animated_art(chrome_logo_3d(ansi_enabled), delay=0.004)
+        spin_chrome_logo(seconds=3.2, turns=2.0, ansi_enabled=ansi_enabled)
         print_animated_art(f"{green}{bold}             CHROME{reset}", delay=0.045)
         print()
         print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)

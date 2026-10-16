@@ -46,7 +46,7 @@ jobs:
           $tunnelOut = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.out.log"
           $tunnelErr = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.err.log"
 
-          $dashboard = Start-Process -FilePath "python" -ArgumentList "scripts/serve_dashboard.py" -PassThru -RedirectStandardOutput $dashboardOut -RedirectStandardError $dashboardErr
+          $dashboard = Start-Process -FilePath "python" -ArgumentList @("-u", "$env:GITHUB_WORKSPACE/scripts/serve_dashboard.py") -WorkingDirectory $env:GITHUB_WORKSPACE -PassThru -RedirectStandardOutput $dashboardOut -RedirectStandardError $dashboardErr
           Write-Host "Started CryptoPulse dashboard process (PID $($dashboard.Id))."
 
           $healthy = $false
@@ -57,7 +57,13 @@ jobs:
               if ($response.StatusCode -eq 200) { $healthy = $true; break }
             } catch {}
             if ($dashboard.HasExited) {
+              Write-Host "Dashboard process exited. stdout log:"
+              if (Test-Path $dashboardOut) { Get-Content $dashboardOut }
+              Write-Host "Dashboard stderr log:"
               if (Test-Path $dashboardErr) { Get-Content $dashboardErr }
+              Write-Host "Python executable and repository contents:"
+              python --version
+              Get-ChildItem $env:GITHUB_WORKSPACE | Select-Object Name, Mode
               throw "CryptoPulse dashboard exited before becoming healthy."
             }
           }

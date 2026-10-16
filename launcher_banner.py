@@ -323,6 +323,63 @@ def _plain():
         out.append("".join(row))
     return "\n".join(out)
 
+def bolt_logo(ansi_enabled: bool = True, truecolor: bool = True, glow: float = 1.0) -> str:
+    """Render a glowing golden lightning bolt."""
+    rows = []
+    points = ((0.62, 0.04), (0.30, 0.53), (0.49, 0.53), (0.35, 0.96),
+              (0.73, 0.39), (0.54, 0.39))
+    for y in range(32):
+        line = []
+        for x in range(56):
+            px, py = (x + 0.5) / 56, (y + 0.5) / 32
+            inside = False
+            for i in range(len(points)):
+                ax, ay = points[i]
+                bx, by = points[(i + 1) % len(points)]
+                if (ay > py) != (by > py) and px < (bx - ax) * (py - ay) / (by - ay) + ax:
+                    inside = not inside
+            if inside and ansi_enabled:
+                k = max(0.0, min(1.0, py))
+                col = (255, int(247 - 87*k), int(140 - 120*k))
+                line.append(f"\\033[38;2;{col[0]};{col[1]};{col[2]}m█")
+            elif inside:
+                line.append("#")
+            else:
+                line.append(" ")
+        rows.append("".join(line) + (RESET if ansi_enabled else ""))
+    return "\\n".join(rows)
+
+
+def bolt_animation(seconds: float = 4.0, truecolor: bool = True,
+                   ansi_enabled: bool = True, clear_after: bool = False) -> None:
+    """Animate the golden lightning bolt with a soft pulsing glow."""
+    if not ansi_enabled or not sys.stdout.isatty():
+        print(bolt_logo(ansi_enabled, truecolor))
+        return
+    height = 32
+    out = sys.stdout
+    out.write("\\033[?25l")
+    try:
+        start = time.perf_counter()
+        first = True
+        while True:
+            elapsed = time.perf_counter() - start
+            done = elapsed >= seconds
+            if not first:
+                out.write(f"\\033[{height}A")
+            out.write(bolt_logo(ansi_enabled, truecolor, 1.0 if done else 0.65 + 0.35 * math.sin(elapsed * 8)) + "\\n")
+            out.flush()
+            first = False
+            if done:
+                break
+            time.sleep(0.04)
+        if clear_after:
+            out.write(f"\\033[{height}A\\033[J")
+    finally:
+        out.write("\\033[?25h")
+        out.flush()
+
+
 def crypto_plus_text(ansi_enabled: bool) -> str:
     """Render CRYPTO PLUS as a separate blue-gradient bitmap wordmark."""
     font = {
@@ -472,8 +529,8 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        flash_snake_bolt(seconds=4.0, ansi_enabled=ansi_enabled)
-        print_animated_art(f"{green}{bold}       SNAKE BOLT{reset}", delay=0.045)
+        bolt_animation(seconds=4.0, ansi_enabled=ansi_enabled)
+        print_animated_art(f"{green}{bold}       LIGHTNING{reset}", delay=0.045)
         print()
         print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)
         print()

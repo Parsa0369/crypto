@@ -12,7 +12,7 @@ services:
         value: 3.12.8
       - key: CRYPTOPULSE_SECRET_KEY
         generateValue: true
-      - key: CRYPTOPULSE_PASSWORD
+      - key: PASS
         sync: false
       - key: COOKIE_SECURE
         value: "true"

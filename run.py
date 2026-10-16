@@ -1,6 +1,4 @@
-"""Local-only CryptoPulse launcher."""
-from getpass import getpass
-import secrets
+""""Local-only CryptoPulse launcher."""
 import socket
 import webbrowser
 from threading import Timer
@@ -50,33 +48,23 @@ def start_github_runner_if_configured() -> None:
 
 
 def main() -> None:
-    print("\nCryptoPulse | Local market research dashboard")
-    # GitHub Actions can provide PASS as an environment secret. A local shell
-    # cannot read GitHub Secrets automatically; absent PASS, prompt securely.
-    password = os.environ.get("PASS", "")
-    if password:
-        print("Using the dashboard password supplied by the PASS environment variable.")
-    else:
-        password = getpass("Create dashboard password (hidden): ")
-        if len(password) < 10:
-            raise SystemExit("Use a password with at least 10 characters.")
-        confirm = getpass("Confirm password: ")
-        if not secrets.compare_digest(password, confirm):
-            raise SystemExit("Passwords do not match.")
-
+    print("\\nCryptoPulse | Local market research dashboard")
+    # The password is configured as PASS; the user enters it on the website login page.
+    password = os.environ.get("PASS", "").strip()
     if len(password) < 10:
-        raise SystemExit("Use a password with at least 10 characters.")
+        raise SystemExit("PASS is not configured (or is shorter than 10 characters). Set it in the hosting environment; no terminal prompt is used.")
 
     start_github_runner_if_configured()
 
     port = find_port()
     app = create_app(password)
     url = f"http://127.0.0.1:{port}"
-    print(f"\nDashboard: {url}")
-    print("Local-only server. Press Ctrl+C to stop.\n")
+    print(f"\\nDashboard: {url}")
+    print("Local-only server. Press Ctrl+C to stop.\\n")
     Timer(1.0, lambda: webbrowser.open(url)).start()
     app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
 
 
 if __name__ == "__main__":
     main()
+"

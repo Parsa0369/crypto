@@ -170,19 +170,44 @@ if ($Command -eq "panel") {
     Write-Host "  Waiting for the tunnel URL; the website will open automatically as soon as it is published..." -ForegroundColor Yellow
 
     $publicUrl = $null
-    for ($attempt = 0; $attempt -lt 90; $attempt++) {
-        $logText = gh run view $run.databaseId --repo Parsa0369/crypto --log 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            $joinedLog = $logText -join "`n"
-            if ($joinedLog -match 'CryptoPulse dashboard link \(temporary\): (https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
-                $publicUrl = $Matches[1]
-                break
+    $cSource = Join-Path $PSScriptRoot "link_finder.c"
+    $cExe = Join-Path $env:TEMP "cryptopulse-link-finder.exe"
+    $gcc = Get-Command gcc -ErrorAction SilentlyContinue
+
+    # Prefer the small native C scanner; it checks the Actions log for the first public URL.
+    if ($gcc -and (Test-Path $cSource)) {
+        Write-Host "  [C] Compiling native link scanner..." -ForegroundColor Cyan
+        & $gcc.Source $cSource "-O2" "-o" $cExe
+        if ($LASTEXITCODE -eq 0 -and (Test-Path $cExe)) {
+            Write-Host "  [C] Scanning Actions output for the website link..." -ForegroundColor Yellow
+            $found = & $cExe $run.databaseId 180
+            if ($LASTEXITCODE -eq 0 -and $found) {
+                $candidate = ($found | Select-Object -Last 1).ToString().Trim()
+                if ($candidate -match '^https://[a-zA-Z0-9-]+\.trycloudflare\.com$') {
+                    $publicUrl = $candidate
+                }
             }
+        } else {
+            Write-Host "  [WARN] C compiler failed; using PowerShell scanner instead." -ForegroundColor Yellow
         }
-        $frames = @('|','/','-','\\')
-        Write-Host ("  {0} Preparing secure dashboard..." -f $frames[$attempt % $frames.Count]) -NoNewline -ForegroundColor Cyan
-        Start-Sleep -Seconds 2
-        Write-Host "`r" -NoNewline
+    }
+
+    # Fallback for Windows machines without GCC installed.
+    if (-not $publicUrl) {
+        for ($attempt = 0; $attempt -lt 90; $attempt++) {
+            $logText = gh run view $run.databaseId --repo Parsa0369/crypto --log 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $joinedLog = $logText -join "`n"
+                if ($joinedLog -match 'CryptoPulse dashboard link \\(temporary\\): (https://[a-zA-Z0-9-]+\\.trycloudflare\\.com)') {
+                    $publicUrl = $Matches[1]
+                    break
+                }
+            }
+            $frames = @('|','/','-','\\\\')
+            Write-Host ("  {0} Preparing secure dashboard..." -f $frames[$attempt % $frames.Count]) -NoNewline -ForegroundColor Cyan
+            Start-Sleep -Seconds 2
+            Write-Host "`r" -NoNewline
+        }
     }
 
     if ($publicUrl) {

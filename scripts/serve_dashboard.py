@@ -1,5 +1,15 @@
 """Run the CryptoPulse Flask dashboard on the local interface for a tunnel."""
 import os
+import sys
+from pathlib import Path
+
+# When launched as `python scripts/serve_dashboard.py`, Python may put only
+# the scripts directory on sys.path. Add the repository root so `backend`
+# can be imported reliably on GitHub Actions Windows runners.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from backend.app import create_app
 
 password = os.environ.get("PASS", "").strip()

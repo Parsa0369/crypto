@@ -26,11 +26,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: python -m pip install -r requirements.txt --retries 4 --timeout 60
 
       - name: Start dashboard and secure tunnel
+        id: dashboard_start
         shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:PASS) -or $env:PASS.Length -lt 10) {
@@ -103,16 +106,34 @@ jobs:
           "Dashboard link (temporary): $publicUrl" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           "This link works only while this workflow run and tunnel remain active. The URL is not a permanent hosting address." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          # Save process IDs so the long-running keepalive step can monitor them.
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.pid") -Value $dashboard.Id -Encoding ASCII
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.pid") -Value $tunnel.Id -Encoding ASCII
+          "public_url=$publicUrl" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Host "CryptoPulse dashboard link (temporary): $publicUrl"
           Write-Host "Do not share the login password. The dashboard stays available only while this workflow run is active."
 
+      - name: Keep dashboard and tunnel alive
+        shell: pwsh
+        run: |
+          $dashboardPidFile = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.pid"
+          $tunnelPidFile = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.pid"
+          if (-not (Test-Path $dashboardPidFile) -or -not (Test-Path $tunnelPidFile)) {
+            throw "Dashboard or tunnel process ID file is missing."
+          }
+          $dashboardPid = [int](Get-Content $dashboardPidFile -Raw).Trim()
+          $tunnelPid = [int](Get-Content $tunnelPidFile -Raw).Trim()
+          $dashboardErr = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.err.log"
+          $tunnelErr = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.err.log"
+          Write-Host "Dashboard and tunnel are running. The public link was published in the previous step."
           $deadline = [DateTime]::UtcNow.AddMinutes(345)
           while ([DateTime]::UtcNow -lt $deadline) {
-            if ($dashboard.HasExited) {
+            if (-not (Get-Process -Id $dashboardPid -ErrorAction SilentlyContinue)) {
               if (Test-Path $dashboardErr) { Get-Content $dashboardErr }
               throw "CryptoPulse dashboard process stopped."
             }
-            if ($tunnel.HasExited) {
+            if (-not (Get-Process -Id $tunnelPid -ErrorAction SilentlyContinue)) {
               if (Test-Path $tunnelErr) { Get-Content $tunnelErr }
               throw "Cloudflare Tunnel process stopped."
             }

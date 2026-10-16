@@ -23,7 +23,7 @@ ROUTES = {"index": "/", "login": "/login", "logout": "/logout", "backtesting_pag
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 310_000)
-    return f"pbkdf2_sha256\${salt.hex()}\${digest.hex()}"
+    return "pbkdf2_sha256$" + salt.hex() + "$" + digest.hex()
 
 def verify_password(password: str, encoded: str) -> bool:
     try:

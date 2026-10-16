@@ -116,6 +116,51 @@ if ($Command -eq "open") {
     }
 }
 
+# Hosted mode: "panel" starts a fresh GitHub Actions dashboard run instead of the local server.
+if ($Command -eq "panel") {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        throw "GitHub CLI (gh) is required for hosted 'panel'. Install it with: winget install --id GitHub.cli"
+    }
+
+    gh auth status | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "GitHub CLI is not logged in. Run: gh auth login"
+    }
+
+    $startedAt = [DateTime]::UtcNow
+    Write-Host "  [START] Requesting a fresh hosted CryptoPulse dashboard..." -ForegroundColor Cyan
+    gh workflow run dashboard.yml --repo Parsa0369/crypto --ref main
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not dispatch dashboard.yml. Check GitHub access and workflow permissions."
+    }
+
+    $run = $null
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+        Start-Sleep -Seconds 3
+        $runJson = gh run list --repo Parsa0369/crypto --workflow dashboard.yml --event workflow_dispatch --limit 10 --json databaseId,createdAt,status,url
+        if ($LASTEXITCODE -ne 0) { continue }
+        $runs = $runJson | ConvertFrom-Json
+        $run = $runs |
+            Where-Object { [DateTime]::Parse($_.createdAt).ToUniversalTime() -ge $startedAt.AddSeconds(-5) } |
+            Sort-Object createdAt -Descending |
+            Select-Object -First 1
+        if ($run) { break }
+    }
+
+    if (-not $run) {
+        Write-Host "  [WARN] The workflow was dispatched, but its run page could not be located." -ForegroundColor Yellow
+        Start-Process "https://github.com/Parsa0369/crypto/actions/workflows/dashboard.yml"
+        exit 0
+    }
+
+    Write-Host ""
+    Write-Host "  [OK] New GitHub Actions run started: $($run.url)" -ForegroundColor Green
+    Write-Host "  Waiting for the temporary Cloudflare link. The run page will open now." -ForegroundColor Yellow
+    Start-Process $run.url
+    Write-Host "  In the run page, open Summary and click 'Dashboard link (temporary)' once it appears." -ForegroundColor Cyan
+    exit 0
+}
+
 $python = Get-Command py -ErrorAction SilentlyContinue
 if ($python) {
     $pythonCommand = "py"

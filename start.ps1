@@ -167,10 +167,10 @@ if ($Command -eq "panel") {
 
     Write-Host ""
     Write-Host "  [OK] New GitHub Actions run started: $($run.url)" -ForegroundColor Green
-    Write-Host "  Waiting for CryptoPulse to come online; the website will open automatically..." -ForegroundColor Yellow
+    Write-Host "  Waiting for the tunnel URL; the website will open automatically as soon as it is published..." -ForegroundColor Yellow
 
     $publicUrl = $null
-    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+    for ($attempt = 0; $attempt -lt 90; $attempt++) {
         $logText = gh run view $run.databaseId --repo Parsa0369/crypto --log 2>$null
         if ($LASTEXITCODE -eq 0) {
             $joinedLog = $logText -join "`n"
@@ -181,7 +181,7 @@ if ($Command -eq "panel") {
         }
         $frames = @('|','/','-','\\')
         Write-Host ("  {0} Preparing secure dashboard..." -f $frames[$attempt % $frames.Count]) -NoNewline -ForegroundColor Cyan
-        Start-Sleep -Seconds 5
+        Start-Sleep -Seconds 2
         Write-Host "`r" -NoNewline
     }
 
@@ -193,7 +193,7 @@ if ($Command -eq "panel") {
         Write-Host "  Browser opened automatically. This temporary link works while the workflow is running." -ForegroundColor DarkGray
     } else {
         Write-Host ""
-        Write-Host "  [WARN] The dashboard link did not appear within 10 minutes." -ForegroundColor Yellow
+        Write-Host "  [WARN] The dashboard link did not appear within 3 minutes." -ForegroundColor Yellow
         Write-Host "  Opening the workflow page so you can check its status." -ForegroundColor Cyan
         Start-Process $run.url
     }

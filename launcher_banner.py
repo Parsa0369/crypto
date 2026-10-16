@@ -51,24 +51,25 @@ def enable_terminal_colors() -> bool:
 
 RESET = "\033[0m"
 
-SIZE = 56           # اندازه‌ی کانوا (پیکسل)؛ هر کاراکتر = ۲ پیکسل عمودی
-SS = 2              # سوپرسمپلینگ برای لبه‌های نرم
-SHADOW = (34, 14, 42)
-SHADOW_OFFSET = 0.07
+SIZE = 56            # اندازه‌ی کانوا (پیکسل)؛ هر کاراکتر = ۲ پیکسل عمودی
+SS = 2               # سوپرسمپلینگ برای لبه‌های نرم
+SHADOW = (24, 30, 44)
+SHADOW_OFFSET = 0.06
 
-PINK = (255, 105, 180)
-HOT = (255, 160, 215)
-DEEP = (10, 6, 16)          # مشکی بنفش‌مایل (قلب)
-LILAC = (92, 40, 110)       # بنفش تیره‌ی سمت نور
+GREEN = (68, 214, 44)        # سبز اسیدی (مار اول)
+BLUE = (55, 118, 171)        # آبی (مار دوم)
+YELLOW = (255, 212, 59)      # زرد (چشم‌ها)
+BOLT_TOP, BOLT_BOT = (255, 247, 140), (255, 160, 20)
+AURA_COLOR = (255, 215, 70)
 WHITE = (255, 255, 255)
 
-_L = (-0.45, -0.55, 0.70)
-_LN = math.sqrt(sum(v * v for v in _L))
-LIGHT = tuple(v / _LN for v in _L)
+RING_IN = 0.88               # شعاع داخلی حلقه‌ی سکه
+AURA = 0.16                  # شعاع هاله‌ی صاعقه
+_LX, _LY = -0.58, -0.81      # جهت نور (بالا-چپ)
 
-# خط ضربان قلب روی قلب
-ECG = ((-0.62, 0.14), (-0.30, 0.14), (-0.18, -0.10), (-0.06, 0.36),
-       (0.06, -0.28), (0.17, 0.14), (0.62, 0.14))
+# صاعقه (مختصات نرمال‌شده)
+BOLT = ((0.10, -0.54), (-0.24, 0.05), (-0.03, 0.05), (-0.13, 0.54), (0.25, -0.10), (0.04, -0.10))
+_BY0, _BY1 = -0.54, 0.54
 
 
 def _scale(c, f):
@@ -80,91 +81,143 @@ def _mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def _heart_f(x, y):
-    """تابع ضمنی قلب؛ منفی = داخل قلب."""
-    return (x * x + y * y - 1) ** 3 - x * x * y ** 3
+# ---------- دو مار (گردابی، مثل یین‌یانگ) ----------
+def _make_arms(n=120, sweep=3.7):
+    arms = []
+    for k in range(2):
+        a0 = -2.9 + k * math.pi
+        pts = []
+        for i in range(n + 1):
+            t = i / n
+            r = 0.04 + 0.60 * t
+            a = a0 + sweep * t
+            w = 0.035 + 0.17 * t ** 1.6              # دم باریک، سر پهن
+            pts.append((r * math.cos(a), r * math.sin(a), w, t))
+        arms.append(pts)
+    return arms
 
 
-def _seg_dist(px, py, ax, ay, bx, by):
-    dx, dy = bx - ax, by - ay
-    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
-    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+ARMS = _make_arms()
+PAL = (GREEN, BLUE)
 
 
-def _bow(nx, ny):
-    """پاپیون صورتی روی لوب بالا-چپ قلب؛ رنگ یا None."""
-    cx, cy = -0.50, -0.60
-    for sgn in (-1, 1):                                 # دو حلقه‌ی پاپیون
-        ex, ey = nx - (cx + sgn * 0.22), ny - (cy - 0.04 * sgn)
-        a = math.radians(-28 * sgn)
-        u, v = ex * math.cos(a) - ey * math.sin(a), ex * math.sin(a) + ey * math.cos(a)
-        d = (u / 0.23) ** 2 + (v / 0.135) ** 2
-        if d < 1:
-            lit = max(0.0, -(ex * LIGHT[0] + ey * LIGHT[1]) / 0.18)
-            col = _mix(PINK, HOT, 0.6 * lit)
-            if d < 0.30:                                # فرورفتگی داخل حلقه
-                col = _scale(col, 0.78)
-            if d > 0.80:                                # لبه‌ی روشن
-                col = _mix(col, WHITE, 0.35)
-            return col
-    k = math.hypot(nx - cx, ny - cy)                    # گره‌ی وسط
-    if k < 0.09:
-        lit = max(0.0, -((nx - cx) * LIGHT[0] + (ny - cy) * LIGHT[1]) / 0.09)
-        return _mix(_scale(PINK, 0.85), WHITE, 0.45 * lit)
-    return None
+def _eye(pts, side):
+    qx, qy, w, t = pts[int(len(pts) * 0.86)]
+    r = math.hypot(qx, qy) or 1.0
+    return (qx + side * qx / r * w * 0.45, qy + side * qy / r * w * 0.45)
 
 
-def _heart_color(nx, ny, s):
-    """رنگ لوگو در نقطه‌ی (nx, ny)؛ s = ضریب بزرگ‌نمایی ضربان. بیرون: None."""
-    nx, ny = nx / s, ny / s
-    x, y = nx * 1.25, -ny * 1.25 + 0.10
-    f = _heart_f(x, y)
-
-    bow = _bow(nx, ny)
-    if f > 0:
-        return bow
-
-    e = 0.01
-    gx = _heart_f(x + e, y) - _heart_f(x - e, y)
-    gy = _heart_f(x, y + e) - _heart_f(x, y - e)
-    dist = -f * 2 * e / (math.hypot(gx, gy) or 1.0)     # فاصله‌ی تخمینی تا لبه
-
-    rr = (nx * nx + (ny - 0.02) ** 2) / 0.95            # کره‌ی نرم برای نور
-    z = math.sqrt(max(0.0, 1 - rr))
-    dot = max(0.0, nx * LIGHT[0] * 0.8 + ny * LIGHT[1] * 0.8 + z * LIGHT[2] * 1.15)
-    body = _mix(DEEP, LILAC, min(1.0, dot) ** 1.3)
-
-    if dist < 0.045:                                    # حاشیه‌ی صورتی نئونی
-        body = _mix(PINK, body, dist / 0.045 * 0.55)
-    g = math.hypot(nx + 0.40, ny + 0.20)                # لکه‌ی نور روی لوب چپ
-    if g < 0.10:
-        body = _mix(body, WHITE, 0.6 * (1 - g / 0.10))
-
-    ex, ey = nx, ny * 1.0                             # خط ضربان
-    best = min(_seg_dist(ex, ey, ECG[i][0], ECG[i][1], ECG[i + 1][0], ECG[i + 1][1])
-               for i in range(len(ECG) - 1))
-    if best < 0.04:
-        body = _mix(body, WHITE, 0.95 if best < 0.026 else 0.5)
-        body = _mix(body, HOT, 0.25)
-    return bow if bow is not None else body
+EYES = [_eye(ARMS[0], 1), _eye(ARMS[1], 1)]
 
 
-def _pixel(px, py, s):
+def _poly_dist(x, y):
+    """فاصله‌ی علامت‌دار تا صاعقه؛ منفی = داخل."""
+    inside, best = False, 9.0
+    n = len(BOLT)
+    for i in range(n):
+        ax, ay = BOLT[i]
+        bx, by = BOLT[(i + 1) % n]
+        if (ay > y) != (by > y) and x < (bx - ax) * (y - ay) / (by - ay) + ax:
+            inside = not inside
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(x - (ax + t * dx), y - (ay + t * dy)))
+    return -best if inside else best
+
+
+def _base(nx, ny):
+    """رنگ ثابت (سکه + مارها)؛ بیرون دایره None."""
+    r = math.hypot(nx, ny)
+    if r > 1:
+        return None
+    ang = math.degrees(math.atan2(ny, nx)) % 360
+
+    if r >= RING_IN:                                  # حلقه‌ی سکه (لبه‌ی دندانه‌دار)
+        k = (r - RING_IN) / (1 - RING_IN)
+        cross = (k - 0.5) * 2
+        rx, ry = nx / r, ny / r
+        dot = (rx * _LX + ry * _LY) * cross * 0.8 + math.sqrt(max(0.0, 1 - cross * cross)) * 0.55
+        f = 0.50 + 0.70 * max(0.0, dot)
+        col = _mix(GREEN, BLUE, (1 + math.cos(math.radians(ang - 40))) / 2)
+        col = _scale(col, f)
+        if f > 1.0:
+            col = _mix(col, WHITE, (f - 1.0) * 0.9)
+        if ang % 15 < 1.6:
+            col = _scale(col, 0.72)
+        return col
+
+    best = None
+    for ki, pts in enumerate(ARMS):                   # مارها
+        for (qx, qy, w, t) in pts:
+            dx, dy = nx - qx, ny - qy
+            d = math.hypot(dx, dy)
+            if d < w and (best is None or d / w < best[0]):
+                best = (d / w, ki, t, dx / w, dy / w)
+    for ex, ey in EYES:
+        if math.hypot(nx - ex, ny - ey) < 0.05:
+            return YELLOW
+    if best is not None:
+        cross, ki, t, ux, uy = best
+        nz = math.sqrt(max(0.0, 1 - cross * cross))
+        dot = (ux * _LX + uy * _LY) * 0.8 + nz * 0.55
+        f = 0.45 + 0.75 * max(0.0, min(1.0, dot))
+        if int(t * 20) % 2 == 0 and cross < 0.85:     # خط‌های فلس روی بدنه
+            f *= 0.88
+        col = _scale(PAL[ki], f)
+        if f > 1.0:
+            col = _mix(col, WHITE, (f - 1.0) * 1.1)
+        return col
+
+    if 0.855 < r < 0.875:                             # خط باریک داخلی سکه
+        return _scale(_mix(GREEN, BLUE, (1 + math.cos(math.radians(ang - 40))) / 2), 0.45)
+    return _mix((18, 27, 50), (6, 9, 20), r / RING_IN)  # صفحه‌ی تیره‌ی سکه
+
+
+_GRID = None
+
+
+def _build():
     half = SIZE / 2
     cx = cy = half - 1.0
     scale = half * 0.92
+    grid = []
+    for py in range(SIZE):
+        row = []
+        for px in range(SIZE):
+            samples = []
+            for i in range(SS):
+                for j in range(SS):
+                    nx = (px + (i + 0.5) / SS - cx) / scale
+                    ny = (py + (j + 0.5) / SS - cy) / scale
+                    b = _base(nx, ny)
+                    if b is None:
+                        sh = math.hypot(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET) <= 1
+                        samples.append((None, 9.0, ny, sh))
+                    else:
+                        samples.append((b, _poly_dist(nx, ny), ny, False))
+            row.append(samples)
+        grid.append(row)
+    return grid
+
+
+def _resolve(samples, glow):
     acc, n, sh = [0, 0, 0], 0, 0
-    for i in range(SS):
-        for j in range(SS):
-            nx = (px + (i + 0.5) / SS - cx) / scale
-            ny = (py + (j + 0.5) / SS - cy) / scale
-            c = _heart_color(nx, ny, s)
-            if c is not None:
-                n += 1
-                acc = [acc[k] + c[k] for k in range(3)]
-            elif SHADOW and _heart_color(nx - SHADOW_OFFSET, ny - SHADOW_OFFSET, s) is not None:
-                sh += 1
-    total = SS * SS
+    for base, bd, ny, shadow in samples:
+        if base is None:
+            sh += shadow
+            continue
+        if bd < 0:                                    # داخل صاعقه
+            col = _mix(BOLT_TOP, BOLT_BOT, (ny - _BY0) / (_BY1 - _BY0))
+            if -bd < 0.028:
+                col = _mix(col, WHITE, 0.55 * (1 - -bd / 0.028))
+            col = _scale(col, 0.80 + 0.30 * glow)
+        elif bd < AURA:                               # هاله‌ی نور
+            col = _mix(base, AURA_COLOR, glow * (1 - bd / AURA) ** 2 * 0.65)
+        else:
+            col = base
+        acc[0] += col[0]; acc[1] += col[1]; acc[2] += col[2]
+        n += 1
+    total = len(samples)
     if n * 2 >= total:
         return (acc[0] // n, acc[1] // n, acc[2] // n)
     if sh * 2 >= total:
@@ -178,8 +231,11 @@ def _code(rgb, truecolor):
     return f"5;{16 + 36 * round(rgb[0] / 51) + 6 * round(rgb[1] / 51) + round(rgb[2] / 51)}"
 
 
-def _frame(s, truecolor=True):
-    px = [[_pixel(x, y, s) for x in range(SIZE)] for y in range(SIZE)]
+def _frame(glow, truecolor=True):
+    global _GRID
+    if _GRID is None:
+        _GRID = _build()
+    px = [[_resolve(s, glow) for s in row] for row in _GRID]
     rows = []
     for r in range(SIZE // 2):
         line = []
@@ -197,26 +253,35 @@ def _frame(s, truecolor=True):
     return "\n".join(rows)
 
 
-def pulse_heart_3d(ansi_enabled: bool = True, truecolor: bool = True, beat: float = 1.0) -> str:
-    """قلب سه‌بعدی با پاپیون و خط ضربان. beat = ضریب بزرگ‌نمایی (۱ = حالت عادی)."""
+def _caption():
+    pad = " " * ((SIZE - 26) // 2)
+    return (f"{pad}\033[1;38;5;75mP Y T H O N\033[0m \033[38;5;220m ⚡ \033[0m "
+            f"\033[1;38;5;82mC R Y P T O\033[0m")
+
+
+def snake_bolt_logo(ansi_enabled: bool = True, truecolor: bool = True,
+                    glow: float = 1.0, caption: bool = True) -> str:
+    """سکه‌ی کریپتو + دو مار (سبز و آبی) + صاعقه‌ی ⚡. glow = شدت نور صاعقه."""
     if not ansi_enabled:
         return _plain()
-    return _frame(beat, truecolor)
+    out = _frame(glow, truecolor)
+    return out + "\n" + _caption() if caption else out
 
 
-def _beat(t):
-    """الگوی «لاب-داب»: دو ضربه‌ی پشت‌سرهم و بعد استراحت (دوره‌ی ۱ ثانیه)."""
-    t %= 1.0
-    return (math.exp(-((t - 0.10) / 0.055) ** 2) + 0.7 * math.exp(-((t - 0.32) / 0.07) ** 2))
+def _flash(t):
+    """الگوی برق: دو جرقه‌ی پشت‌سرهم و محو شدن؛ دوره‌ی ۱.۲ ثانیه."""
+    t %= 1.2
+    return max(math.exp(-((t - 0.10) / 0.04) ** 2), 0.8 * math.exp(-((t - 0.26) / 0.05) ** 2),
+               0.35 * math.exp(-max(0.0, t - 0.3) / 0.35))
 
 
-def beat_pulse_heart(seconds: float = 4.0, strength: float = 0.09, truecolor: bool = True,
-                     ansi_enabled: bool = True) -> None:
-    """انیمیشن ضربان قلب؛ در پایان روی اندازه‌ی عادی می‌ایسته."""
+def flash_snake_bolt(seconds: float = 4.0, truecolor: bool = True, ansi_enabled: bool = True,
+                     caption: bool = True) -> None:
+    """انیمیشن: صاعقه جرقه می‌زنه و نورش روی سکه و مارها می‌افته؛ در پایان روشن می‌مونه."""
     if not ansi_enabled or not sys.stdout.isatty():
-        print(pulse_heart_3d(ansi_enabled, truecolor))
+        print(snake_bolt_logo(ansi_enabled, truecolor, caption=caption))
         return
-    height = SIZE // 2
+    height = SIZE // 2 + (1 if caption else 0)
     out = sys.stdout
     out.write("\033[?25l")
     try:
@@ -225,10 +290,11 @@ def beat_pulse_heart(seconds: float = 4.0, strength: float = 0.09, truecolor: bo
         while True:
             el = time.perf_counter() - start
             done = el >= seconds
-            s = 1.0 if done else 1.0 + strength * _beat(el)
+            g = 1.0 if done else 0.25 + 0.95 * _flash(el)
             if not first:
                 out.write(f"\033[{height}A")
-            out.write(_frame(s, truecolor) + "\n")
+            text = _frame(g, truecolor)
+            out.write((text + "\n" + _caption() if caption else text) + "\n")
             out.flush()
             first = False
             if done:
@@ -244,8 +310,16 @@ def _plain():
     for y in range(H):
         row = []
         for x in range(W):
-            c = _heart_color(((x + 0.5) / W * 2 - 1) / 0.92, ((y + 0.5) / H * 2 - 1) / 0.92, 1.0)
-            row.append(" " if c is None else ("*" if c[0] > 200 and c[2] > 140 else "#"))
+            nx, ny = ((x + 0.5) / W * 2 - 1) / 0.92, ((y + 0.5) / H * 2 - 1) / 0.92
+            b = _base(nx, ny)
+            if b is None:
+                row.append(" ")
+            elif _poly_dist(nx, ny) < 0:
+                row.append("Z")
+            elif math.hypot(nx, ny) >= RING_IN:
+                row.append("o")
+            else:
+                row.append("S" if max(b) > 70 and (b[1] > b[2] or b[2] > b[0]) and sum(b) > 160 else " ")
         out.append("".join(row))
     return "\n".join(out)
 
@@ -398,8 +472,8 @@ def main() -> None:
 
         print(f"{green}{bold}  READY{reset}")
         print()
-        beat_pulse_heart(seconds=4.0, strength=0.09, ansi_enabled=ansi_enabled)
-        print_animated_art(f"{green}{bold}          HEARTBEAT{reset}", delay=0.045)
+        flash_snake_bolt(seconds=4.0, ansi_enabled=ansi_enabled)
+        print_animated_art(f"{green}{bold}       SNAKE BOLT{reset}", delay=0.045)
         print()
         print_animated_art(crypto_plus_text(ansi_enabled), delay=0.004)
         print()

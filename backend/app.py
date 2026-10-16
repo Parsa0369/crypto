@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
+from .ai_engine import train_and_predict
 from .analysis import analyze
 from .backtesting import run_ema_backtest
 from .market_data import MarketDataError, fetch_hourly_klines, get_runner_status, get_supported_symbols
@@ -18,7 +20,7 @@ PASSWORD_FILE = (Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Crypt
                  if os.name == "nt" else Path.home() / ".local/share/cryptopulse/password.json")
 ROUTES = {"index": "/", "login": "/login", "logout": "/logout", "backtesting_page": "/backtesting",
           "deep_analysis_page": "/deep-analysis", "behind_scenes_page": "/behind-scenes",
-          "market_chart_page": "/market-chart", "static": "/static/{filename}"}
+          "market_chart_page": "/market-chart", "ai_lab_page": "/ai-lab", "static": "/static/{filename}"}
 
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
@@ -87,6 +89,37 @@ def create_app(password: str | None = None) -> FastAPI:
     @app.get("/market-chart")
     async def market_chart_page(request: Request):
         return page(request, "market_chart.html") if authenticated(request) else RedirectResponse("/login", 303)
+
+    @app.get("/ai-lab")
+    async def ai_lab_page(request: Request):
+        return page(request, "ai_lab.html") if authenticated(request) else RedirectResponse("/login", 303)
+
+    @app.post("/api/ai-predict")
+    async def ai_predict_api(request: Request):
+        if not authenticated(request): return auth_error()
+        try:
+            body = await request.json()
+            symbol = str(body.get("symbol", "BTCUSDT")).upper().strip()
+            horizon = int(body.get("horizon_hours", 6))
+            target = float(body.get("target_pct", 5))
+            if not symbol.isalnum() or not symbol.endswith("USDT") or not 5 <= len(symbol) <= 20:
+                return JSONResponse({"error":"نماد معتبر جفت‌ارز USDT وارد کن؛ مثلاً BTCUSDT."}, 400)
+            if not 1 <= horizon <= 168:
+                return JSONResponse({"error":"افق زمانی باید بین ۱ تا ۱۶۸ ساعت باشد."}, 400)
+            if not 1 <= target <= 100:
+                return JSONResponse({"error":"هدف باید بین ۱ تا ۱۰۰ درصد باشد."}, 400)
+            candles = await run_in_threadpool(fetch_hourly_klines, symbol, 1000)
+            result = await run_in_threadpool(train_and_predict, candles, horizon)
+            result.update({"symbol":symbol, "target_pct":target, "source":candles[-1].get("source","Unknown"),
+                           "last_candle_time_ms":candles[-1].get("open_time")})
+            return result
+        except (ValueError, MarketDataError) as exc:
+            return JSONResponse({"error":str(exc)}, 400)
+        except RuntimeError as exc:
+            return JSONResponse({"error":str(exc)}, 503)
+        except Exception:
+            logging.exception("AI prediction failed")
+            return JSONResponse({"error":"خطای داخلی موتور هوش مصنوعی؛ جزئیات در ترمینال محلی ثبت شد."}, 500)
 
     @app.get("/login")
     async def login_page(request: Request):

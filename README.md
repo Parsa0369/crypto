@@ -1,14 +1,14 @@
 # CryptoPulse
 
-**A local-first cryptocurrency market research dashboard for Windows.** CryptoPulse retrieves public market candles, computes transparent historical statistics, and displays them in a Persian right-to-left web interface.
+**A local-only cryptocurrency market research dashboard for Windows, powered by FastAPI.** CryptoPulse retrieves public market candles, computes transparent historical statistics, and displays them in a Persian right-to-left web interface.
 
 > **Risk notice:** This is an educational software prototype, not financial advice. Historical frequencies are not calibrated forecasts and do not guarantee future prices or profit. No trading, wallet connection, or exchange account access is implemented.
 
 ## Features
-- Windows PowerShell launcher; local dashboard bound to 127.0.0.1.
+- Windows PowerShell launcher; FastAPI dashboard bound only to 127.0.0.1.
 - Dedicated TradingView Advanced Chart widget embedded in the market chart page.
 - GitHub Actions refreshes public market-data snapshots on a schedule.
-- Website login with password-hash verification; no terminal password prompt.
+- Browser-only first-run password setup with a salted PBKDF2 hash saved outside the repository; no terminal password prompt.
 - Public hourly OHLCV market data (no API key required for this endpoint).
 - Historical up/down frequencies, target-touch frequency, negative-return frequency, volatility, and RSI(14).
 - Educational EMA(12/26) historical backtest with estimated per-side fees, equity curve, drawdown, and comparison against buy-and-hold; simulation only.
@@ -29,17 +29,9 @@ cd crypto
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 .\start.ps1 panel
 ```
-If PowerShell asks for confirmation, type `Y`. The launcher creates a local virtual environment, uses the Tsinghua University PyPI mirror first with a PyPI fallback, and installs dependencies only when `requirements.txt` changes. It then shows a short animated ASCII splash built with the Python `art` library and starts the dashboard. On first launch, create a dashboard password of at least 10 characters. The browser should open automatically.
+If PowerShell asks for confirmation, type `Y`. The launcher creates a local virtual environment, tries available PyPI mirrors, and installs dependencies only when `requirements.txt` changes. It then shows the existing animated lightning splash and starts the FastAPI dashboard on `http://127.0.0.1:8080`. The browser opens automatically; on first launch, create a dashboard password on the website (at least 10 characters). No Cloudflare, tunnel, public server, or GitHub Actions dashboard run is used.
 
-After the first launch, open a new PowerShell terminal in the project folder and type `panel` to start quickly without syncing GitHub. Type `open` to pull the latest GitHub changes and start CryptoPulse. The launcher registers both commands in your PowerShell profile.
-
-## Hosted dashboard through GitHub Actions (temporary)
-
-1. In GitHub, open **Settings → Secrets and variables → Actions** and add a repository secret named `PASS` with a strong password of at least 10 characters. Do not put the password in source code or workflow files.
-2. Open **Actions → CryptoPulse dashboard → Run workflow** to start the dashboard. Open that run and use the **Dashboard link (temporary)** in its summary.
-3. The **CryptoPulse dashboard watchdog** checks every five minutes and queues a new dashboard run if none is active. GitHub-hosted runners are temporary and can be delayed or limited; this is not guaranteed 24/7 hosting. Each restart creates a new Cloudflare quick-tunnel URL.
-
-**Security note:** The temporary URL is shown in the workflow summary/logs. Anyone who can view those logs may see the login page, so keep the dashboard password private and use a long, unique password.
+After the first launch, open PowerShell in the project folder and type `panel` to start quickly without syncing GitHub. Type `open` to pull the latest GitHub changes and start CryptoPulse. The launcher registers both commands in your PowerShell profile.
 
 ## Manual start
 ```powershell
@@ -81,11 +73,11 @@ launcher_banner.py  Animated art-library terminal splash
 ```
 
 ## Network and privacy
-- The dashboard binds only to 127.0.0.1.
+- The dashboard binds only to 127.0.0.1 and is not accessible from other devices or the public internet.
 - Public market candles are fetched from Binance's public market-data endpoint.
 - No API secret, wallet seed, or exchange trading credential is requested.
-- The dashboard runs locally on 127.0.0.1. GitHub Actions is used only to refresh public market-data snapshots; it is not a permanent web host.
-- The Windows launcher uses the Tsinghua University PyPI mirror for dependency downloads, then falls back to the official PyPI index if the mirror fails.
+- The dashboard runs locally on 127.0.0.1. GitHub Actions may refresh public market-data snapshots; it is not used to host the local website.
+- The Windows launcher tries configured regional PyPI mirrors if dependency downloads fail.
 - After a successful install, the launcher caches the requirements hash so repeated starts skip pip and are faster.
 
 ## Open-source acknowledgement

@@ -1,0 +1,111 @@
+name: CryptoPulse dashboard
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cryptopulse-public-dashboard
+  cancel-in-progress: false
+
+jobs:
+  dashboard:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    env:
+      PASS: ${{ secrets.PASS }}
+      PORT: "8080"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt --retries 4 --timeout 60
+
+      - name: Start dashboard and secure tunnel
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PASS) -or $env:PASS.Length -lt 10) {
+            throw "Repository secret PASS is missing or shorter than 10 characters. Add it in Settings > Secrets and variables > Actions."
+          }
+
+          $dashboardOut = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.out.log"
+          $dashboardErr = Join-Path $env:RUNNER_TEMP "cryptopulse-dashboard.err.log"
+          $tunnelOut = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.out.log"
+          $tunnelErr = Join-Path $env:RUNNER_TEMP "cryptopulse-tunnel.err.log"
+
+          $dashboard = Start-Process -FilePath "python" -ArgumentList "scripts/serve_dashboard.py" -PassThru -RedirectStandardOutput $dashboardOut -RedirectStandardError $dashboardErr
+          Write-Host "Started CryptoPulse dashboard process (PID $($dashboard.Id))."
+
+          $healthy = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:8080/login" -UseBasicParsing -TimeoutSec 3
+              if ($response.StatusCode -eq 200) { $healthy = $true; break }
+            } catch {}
+            if ($dashboard.HasExited) {
+              if (Test-Path $dashboardErr) { Get-Content $dashboardErr }
+              throw "CryptoPulse dashboard exited before becoming healthy."
+            }
+          }
+          if (-not $healthy) { throw "CryptoPulse dashboard did not become healthy on port 8080." }
+
+          $cloudflared = Join-Path $env:RUNNER_TEMP "cloudflared.exe"
+          Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile $cloudflared
+          $tunnel = Start-Process -FilePath $cloudflared -ArgumentList @("tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:8080") -PassThru -RedirectStandardOutput $tunnelOut -RedirectStandardError $tunnelErr
+          Write-Host "Started temporary Cloudflare Tunnel (PID $($tunnel.Id)). Waiting for its public URL."
+
+          $publicUrl = $null
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 2
+            foreach ($log in @($tunnelOut, $tunnelErr)) {
+              if (Test-Path $log) {
+                $contents = Get-Content $log -Raw -ErrorAction SilentlyContinue
+                if ($contents -match 'https://[a-zA-Z0-9-]+\.trycloudflare\.com') {
+                  $publicUrl = $Matches[0]
+                  break
+                }
+              }
+            }
+            if ($publicUrl) { break }
+            if ($tunnel.HasExited) {
+              if (Test-Path $tunnelErr) { Get-Content $tunnelErr }
+              throw "Cloudflare Tunnel exited before creating a public URL."
+            }
+          }
+          if (-not $publicUrl) {
+            if (Test-Path $tunnelOut) { Get-Content $tunnelOut }
+            if (Test-Path $tunnelErr) { Get-Content $tunnelErr }
+            throw "Could not obtain a Cloudflare quick-tunnel URL."
+          }
+
+          "## CryptoPulse dashboard" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "Dashboard link (temporary): $publicUrl" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "This link works only while this workflow run and tunnel remain active. The URL is not a permanent hosting address." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "CryptoPulse dashboard link (temporary): $publicUrl"
+          Write-Host "Do not share the login password. The dashboard stays available only while this workflow run is active."
+
+          $deadline = [DateTime]::UtcNow.AddMinutes(345)
+          while ([DateTime]::UtcNow -lt $deadline) {
+            if ($dashboard.HasExited) {
+              if (Test-Path $dashboardErr) { Get-Content $dashboardErr }
+              throw "CryptoPulse dashboard process stopped."
+            }
+            if ($tunnel.HasExited) {
+              if (Test-Path $tunnelErr) { Get-Content $tunnelErr }
+              throw "Cloudflare Tunnel process stopped."
+            }
+            Start-Sleep -Seconds 10
+          }
+          Write-Host "Temporary dashboard run reached its planned time limit."
